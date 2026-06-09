@@ -416,3 +416,23 @@ input { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* =========================================================================
+   Overrides (latest tweaks): black VIRKA mark, larger body text.
+   ========================================================================= */
+
+/* VIRKA wordmark in black. */
+.virka-logo { color: oklch(0.18 0.01 264); height: 20px; }
+
+/* Brand lockup carries the longer "Tippikapping" name; keep it tidy. */
+.brand .tippi { font-size: 1rem; }
+
+/* Larger body text across the app (the readable prose, not the chrome). */
+body { font-size: 1.0625rem; }
+.page-head p { font-size: 1.0625rem; }
+.rule-sec p { font-size: 1.0625rem; line-height: 1.6; }
+.lock-note { font-size: 0.9688rem; line-height: 1.55; }
+.scoretbl td { font-size: 1rem; }
+.side .name { font-size: 1rem; }
+.empty { font-size: 1.0625rem; }
+.switch { font-size: 1rem; }

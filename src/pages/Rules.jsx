@@ -1,4 +1,4 @@
-const LOCK_TEXT = 'Lås allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Síðani verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping upp til 1 tíma áðrenn kick-off';
+const LOCK_TEXT = 'Lás allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Síðani verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping upp til 1 tíma áðrenn kick-off';
 
 export default function Rules() {
   return (

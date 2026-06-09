@@ -1,3 +1,11 @@
+// ---------------------------------------------------------------------------
+// Firebase init.
+//
+// This web config is public by design: it only identifies the project and is
+// shipped in the browser bundle. Real protection comes from Authentication +
+// the Firestore security rules (see firestore.rules), not from hiding these
+// values. Safe to commit.
+// ---------------------------------------------------------------------------
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';

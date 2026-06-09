@@ -37,7 +37,7 @@ export default function Auth() {
     if (!form.email.trim()) { setError('Skriva teldupostin tín fyrst, so sendi eg ein recovery-leinki.'); return; }
     try {
       await resetPassword(form.email.trim());
-      setNotice('Send hava vit teg ein teldupost við einum leinki at endurseta loyniorðið.');
+      setNotice('Vit hava sent tær ein teldupost við einum leinki, har tú kanst endurstilla loyniorðið.');
     } catch (e) {
       setError(prettyError(e));
     }

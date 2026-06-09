@@ -1,7 +1,7 @@
 import { APP } from '../config';
 
-// VIRKA company wordmark. fill:currentColor so it picks up the navy brand
-// colour from CSS (.virka-logo).
+// VIRKA company wordmark. fill:currentColor so it picks up colour from CSS
+// (.virka-logo), which is set to black.
 export function VirkaLogo({ className = 'virka-logo' }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804.24 224.01"
@@ -18,16 +18,16 @@ export function VirkaLogo({ className = 'virka-logo' }) {
 
 // Official competition mark (user-supplied asset).
 export function WcLogo({ className = 'wc-logo' }) {
-  return <img className={className} src="./wc-logo.webp" alt="FIFA World Cup 2026" />;
+  return <img className={className} src="./wc-logo.webp" alt="HM 2026" />;
 }
 
-// Top-bar lockup: VIRKA wordmark + the app's "Tippi" name.
+// Top-bar lockup: VIRKA wordmark + the competition name.
 export function BrandLockup() {
   return (
     <div className="brand">
       <VirkaLogo />
       <span className="divider" />
-      <span className="tippi">Tippi</span>
+      <span className="tippi">Tippikapping</span>
     </div>
   );
 }
