@@ -1,0 +1,24 @@
+{
+  "name": "virka-tippi",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "VIRKA Tippi — in-house FIFA World Cup 2026 prediction league (React + Firebase).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+   "sync": "node --env-file=.env.local scripts/sync.mjs"
+  },
+  "dependencies": {
+    "firebase": "^10.12.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "firebase-admin": "^12.1.1",
+    "vite": "^5.2.11"
+  }
+}
