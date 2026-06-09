@@ -51,7 +51,7 @@ export default function InstallPrompt() {
     <div className="a2hs">
       <button className="a2hs-x" onClick={dismiss} aria-label="Lat aftur">×</button>
       <div className="a2hs-h">Legg appina á heimaskíggjan</div>
-      <p className="a2hs-p">Far skjótari inn: legg Tippikapping sum eitt forrit á heimaskíggjan og opna beinleiðis haðan.</p>
+      <p className="a2hs-p">Legg Tippikapping sum eitt forrit á heimaskíggjan, so kanst tú opna beinleiðis haðan næstu ferð.</p>
 
       {platform === 'ios' && (
         <ol className="a2hs-steps">

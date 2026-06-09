@@ -4,7 +4,7 @@ import { useTournamentCtx } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
 import { MatchRow } from '../components/Match';
 import { scorePick } from '../lib/scoring';
-import { foLong, sameDay } from '../lib/foDate';
+import { foLong, foDayShort, sameDay } from '../lib/foDate';
 
 export default function Today() {
   const { matches, predictionDocs, loaded } = useTournamentCtx();
@@ -43,7 +43,10 @@ export default function Today() {
           {next ? (
             <>
               <p>Næsti dystur:</p>
-              <div style={{ marginTop: 14 }}>{row(next)}</div>
+              <div style={{ marginTop: 14 }}>
+                <div className="day-label" style={{ marginTop: 0 }}>{foDayShort(next.kickoff)}</div>
+                {row(next)}
+              </div>
             </>
           ) : <p>Sí allar dystirnar undir Dystir.</p>}
         </div>

@@ -3,6 +3,7 @@ import { BrandLockup } from './Brand';
 import { TodayIcon, FixturesIcon, PredictIcon, BoardIcon, RulesIcon, LogoutIcon } from './icons';
 import { useAuth } from '../auth/AuthContext';
 import { useTournamentCtx } from '../hooks/useData';
+import InstallPrompt from './InstallPrompt';
 
 const TABS = [
   { to: '/today', label: 'Í dag', Icon: TodayIcon },
@@ -35,6 +36,7 @@ export default function Shell() {
       </header>
 
       <main className="page fade-in">
+        <InstallPrompt />
         <Outlet />
       </main>
 

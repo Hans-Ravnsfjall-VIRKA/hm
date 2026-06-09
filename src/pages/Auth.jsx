@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { VirkaLogo, WcLogo } from '../components/Brand';
-import InstallPrompt from '../components/InstallPrompt';
 import { APP } from '../config';
 
 export default function Auth() {
@@ -53,8 +52,6 @@ export default function Auth() {
         <h1>{APP.name}</h1>
         <p>{APP.edition} · innanhýsis kapping hjá VIRKA</p>
       </div>
-
-      <InstallPrompt />
 
       <div className="seg">
         <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Stovna brúkara</button>
