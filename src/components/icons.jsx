@@ -24,3 +24,14 @@ export const BackIcon = (p) => (<svg viewBox="0 0 24 24" {...p}><path d="m15 6-6
 export const LogoutIcon = (p) => (
   <svg viewBox="0 0 24 24" {...p}><path d="M15 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h9M14 12h7m0 0-3-3m3 3-3 3" {...s} /></svg>
 );
+
+// Icons used in the "Add to Home Screen" guide.
+export const ShareIosIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...p}><path d="M12 3v12M8.5 6.5 12 3l3.5 3.5" {...s} /><path d="M6 11v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-8" {...s} /></svg>
+);
+export const DotsIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...p}><circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none" /></svg>
+);
+export const PlusSquareIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...p}><rect x="4" y="4" width="16" height="16" rx="4" {...s} /><path d="M12 8.5v7M8.5 12h7" {...s} /></svg>
+);

@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 export const APP = {
-  name: 'VIRKA Tippi',
+  name: 'Tippikapping',
   tagline: 'Tippikapping um HM 2026',
   edition: 'HM 2026',
   hosts: 'USA · Kanada · Meksiko',

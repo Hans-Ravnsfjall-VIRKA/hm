@@ -40,15 +40,15 @@ export default function Rules() {
       <div className="panel" style={{ marginBottom: 14 }}>
         <div className="rule-sec">
           <h2>Nýggj umfør</h2>
-          <p>Tá bólkaspælið er liðugt, koma dystirnir í 32-liða-úrslitinum sjálvvirkandi fram, so skjótt liðini eru greið. Tað sama hendir fyri hvørt knockout-umfar. Eingin skal gera nakað av hond.</p>
+          <p>Tá bólkaspælið er liðugt, koma dystirnir í 32-liða-úrslitinum sjálvvirkandi fram, so skjótt liðini eru greið. Tað sama hendir fyri hvørt knockout-umfar.</p>
         </div>
       </div>
 
       <div className="panel">
         <div className="rule-sec">
-          <h2>Beint úrslit</h2>
-          <p>Úrslitini koma frá ESPN. Eitt sjálvvirkandi forrit heldur dystirnar dagførdar, vanliga hvørja 10. minutt. Telefonin hjá tær dagførir seg sjálv, so skjótt eitt nýtt úrslit er goymt, tí appin lesur beint úr dátugrunninum.</p>
-          <p>Stig og støða verða roknað beint í telefonini út frá úrslitunum, so tey eru altíð í samsvari við tað, sum tú sært á skíggjanum.</p>
+          <h2>Livescore</h2>
+          <p>Úrslitini koma frá ESPN. Støðan í dystum verður dagførd automatiskt, vanliga hvørja 10. minutt. Telefonin hjá tær dagførir seg sjálv, so skjótt eitt nýtt úrslit er innlisið, tí appin lesur beint úr dátugrunninum.</p>
+          <p>Stig og støða verða roknað beinleiðis í telefonini út frá úrslitunum, so tey eru altíð í samsvari við tað, sum tú sært á skíggjanum.</p>
         </div>
       </div>
     </>

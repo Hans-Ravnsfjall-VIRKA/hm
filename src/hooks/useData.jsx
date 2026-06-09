@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { buildStages, computeGroupStandings } from '../lib/tournament';
+import { foTeamObj } from '../lib/teams';
 import { buildLeaderboard } from '../lib/scoring';
 import { useAuth } from '../auth/AuthContext';
 
@@ -15,7 +16,12 @@ export function useMatches() {
   useEffect(() => onSnapshot(collection(db, 'matches'), (snap) => {
     const rows = snap.docs.map((d) => {
       const m = d.data();
-      return { ...m, id: d.id, kickoff: m.kickoff ?? (m.date ? Date.parse(m.date) : 0) };
+      return {
+        ...m, id: d.id,
+        kickoff: m.kickoff ?? (m.date ? Date.parse(m.date) : 0),
+        homeTeam: foTeamObj(m.homeTeam),
+        awayTeam: foTeamObj(m.awayTeam),
+      };
     });
     rows.sort((a, b) => a.kickoff - b.kickoff);
     setMatches(rows);
