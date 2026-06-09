@@ -4,13 +4,13 @@ import { useAuth } from '../auth/AuthContext';
 import { MatchRow } from '../components/Match';
 import { BackIcon } from '../components/icons';
 import { scorePick, scoreLabel } from '../lib/scoring';
-import { STAGE_BY_ID, timeUntil } from '../lib/tournament';
+import { STAGE_BY_ID, timeUntil, matchEditable, matchEditDeadline } from '../lib/tournament';
 import { foDateTime } from '../lib/foDate';
 
 export default function MatchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { matches, predictionDocs, stages, loaded, now } = useTournamentCtx();
+  const { matches, predictionDocs, loaded, now } = useTournamentCtx();
   const { user } = useAuth();
 
   if (!loaded) return <div className="spinner" />;
@@ -25,13 +25,12 @@ export default function MatchDetail() {
     );
   }
 
-  const stage = stages.find((s) => s.id === match.stageId);
   const stageMeta = STAGE_BY_ID[match.stageId];
   const result = match.finished && match.result ? match.result : null;
 
-  // Reveal everyone's picks once the stage has locked (or the match is under
-  // way / done). Before that, showing them would spoil the contest.
-  const revealed = !stage || stage.locked || match.live || match.finished;
+  // Reveal everyone's picks only once THIS match locks - 1 hour before its
+  // kickoff - so nobody can copy others' tips while picks are still open.
+  const revealed = match.live || match.finished || !matchEditable(match, now);
 
   const rows = predictionDocs
     .map((doc) => {
@@ -48,7 +47,7 @@ export default function MatchDetail() {
       return a.name.localeCompare(b.name);
     });
 
-  const lock = stage && !stage.locked ? timeUntil(stage.lockAt, now) : null;
+  const revealIn = !revealed ? timeUntil(matchEditDeadline(match), now) : null;
 
   return (
     <>
@@ -65,11 +64,17 @@ export default function MatchDetail() {
 
       <div className="section-label">
         Tippingar
-        {!revealed && <span className="muted"> · fjaldar til umfarið læsir{lock ? ` (${lock})` : ''}</span>}
+        {!revealed && <span className="muted"> · fjaldar{revealIn ? ` (${revealIn})` : ''}</span>}
       </div>
 
+      {!revealed && (
+        <div className="lock-note" style={{ marginBottom: 12 }}>
+          Tippingar hjá hinum verða sýndar 1 tíma áðrenn dysturin byrjar, so eingin kann skriva av.
+        </div>
+      )}
+
       {rows.length === 0 ? (
-        <div className="empty"><p>Ongar tippingar enn.</p></div>
+        <div className="empty"><p>{revealed ? 'Ongar tippingar enn.' : 'Tú hevur ikki tippað hendan dystin enn.'}</p></div>
       ) : (
         <div className="stack">
           {rows.map((r) => (

@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { BackIcon } from '../components/icons';
 import { Flag } from '../components/Match';
 import { scorePick } from '../lib/scoring';
-import { STAGES, STAGE_BY_ID, isConcreteTeam } from '../lib/tournament';
+import { STAGES, STAGE_BY_ID, isConcreteTeam, matchEditable } from '../lib/tournament';
 import { foDateShort, foTime } from '../lib/foDate';
 
 function MiniSide({ team, align }) {
@@ -22,7 +22,7 @@ function MiniSide({ team, align }) {
 export default function Player() {
   const { uid } = useParams();
   const navigate = useNavigate();
-  const { matches, predictionDocs, leaderboard, loaded } = useTournamentCtx();
+  const { matches, predictionDocs, leaderboard, loaded, now } = useTournamentCtx();
   const { user } = useAuth();
 
   const doc = predictionDocs.find((d) => d.uid === uid);
@@ -76,6 +76,9 @@ export default function Player() {
             {items.map(({ match, pick }) => {
               const result = match.finished && match.result ? match.result : null;
               const pts = result && pick ? scorePick(pick, result) : null;
+              // Hide another player's pick until this match locks (1h before
+              // kickoff), so profiles can't be used to copy open tips.
+              const canSee = isMe || match.live || match.finished || !matchEditable(match, now);
               return (
                 <div key={match.id} className="player-row clickable" onClick={() => navigate(`/match/${match.id}`)}>
                   <div className="pr-teams">
@@ -86,7 +89,10 @@ export default function Player() {
                     <MiniSide team={match.awayTeam} align="away" />
                   </div>
                   <div className="pr-pick">
-                    <span className="mono">{pick ? `${pick.h}:${pick.a}` : <span className="muted">—</span>}</span>
+                    <span className="mono">
+                      {!canSee ? <span className="muted" title="Fjalt til 1 tíma áðrenn dystur">Fjalt</span>
+                        : pick ? `${pick.h}:${pick.a}` : <span className="muted">—</span>}
+                    </span>
                     {pts != null && (
                       <span className={`pts-badge ${pts >= 6 ? 'exact' : pts > 0 ? 'scored' : 'zero'}`}>
                         {pts > 0 ? `+${pts}` : '0'}

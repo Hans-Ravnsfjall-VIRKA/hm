@@ -61,7 +61,7 @@ export default function Auth() {
       {mode === 'register' && (
         <div className="field">
           <label>Navn</label>
-          <input value={form.name} onChange={set('name')} placeholder="Soleiðis sæst tú á støðuni" autoComplete="name" />
+          <input value={form.name} onChange={set('name')} placeholder="Navn verður víst í yvirliti" autoComplete="name" />
         </div>
       )}
       <div className="field">
