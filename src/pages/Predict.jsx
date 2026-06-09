@@ -1,10 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTournamentCtx, useSavePicks } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
-import { Flag, Stepper } from '../components/Match';
-import { isConcreteTeam, timeUntil } from '../lib/tournament';
+import { Flag, ScoreInput } from '../components/Match';
+import {
+  isConcreteTeam, timeUntil, matchEditable, stageComplete, tippableStages,
+} from '../lib/tournament';
 
 const lockFmt = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const editFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+const LOCK_TEXT = 'Lås allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Síðani verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping upp til 1 tíma áðrenn kick-off';
 
 export default function Predict() {
   const { stages, predictionDocs, now, loaded } = useTournamentCtx();
@@ -14,32 +19,32 @@ export default function Predict() {
   const savedPicks = useMemo(
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
 
-  const open = stages.filter((s) => s.open);
+  const tippable = useMemo(() => tippableStages(stages, savedPicks), [stages, savedPicks]);
 
   if (!loaded) return <div className="spinner" />;
 
   return (
     <>
       <div className="page-head">
-        <h1>Predict</h1>
-        <p>Lock in every match of a stage before its first kick-off. After that the stage is sealed.</p>
+        <h1>Tipping</h1>
       </div>
 
-      {open.length === 0 && <NothingOpen stages={stages} now={now} />}
+      <div className="lock-note">{LOCK_TEXT}</div>
 
-      {open.map((stage) => (
+      {tippable.length === 0 && <NothingOpen stages={stages} />}
+
+      {tippable.map((stage) => (
         <StagePredictor key={stage.id} stage={stage} savedPicks={savedPicks} now={now} savePicks={savePicks} />
       ))}
 
-      {open.length > 0 && <UpcomingHint stages={stages} now={now} />}
+      {tippable.length > 0 && <UpcomingHint stages={stages} />}
     </>
   );
 }
 
 function StagePredictor({ stage, savedPicks, now, savePicks }) {
-  // Local editable state, seeded from what's saved.
   const [picks, setPicks] = useState({});
-  const [status, setStatus] = useState('idle'); // idle | saving | saved
+  const [status, setStatus] = useState('idle');
 
   useEffect(() => {
     const seed = {};
@@ -56,16 +61,22 @@ function StagePredictor({ stage, savedPicks, now, savePicks }) {
   };
 
   const complete = (p) => Number.isInteger(p?.h) && Number.isInteger(p?.a);
+  const alreadyComplete = stageComplete(stage, savedPicks);
   const done = stage.matches.filter((m) => complete(picks[m.id])).length;
   const all = stage.matches.length;
-  const remaining = timeUntil(stage.lockAt, now);
+  const remaining = timeUntil(stage.firstKickoff, now);
+
+  // After registration locks, only people who already completed the stage may
+  // edit, and only matches still inside their 1-hour window.
+  const canEditMatch = (m) =>
+    matchEditable(m, now) && (!stage.registrationLocked || alreadyComplete);
 
   async function save() {
     setStatus('saving');
     const toSave = {};
     for (const m of stage.matches) {
       const p = picks[m.id];
-      if (complete(p)) toSave[m.id] = { h: p.h, a: p.a };
+      if (complete(p) && canEditMatch(m)) toSave[m.id] = { h: p.h, a: p.a };
     }
     try {
       await savePicks(toSave);
@@ -76,84 +87,101 @@ function StagePredictor({ stage, savedPicks, now, savePicks }) {
     }
   }
 
+  const anyEditable = stage.matches.some(canEditMatch);
+
   return (
     <section style={{ marginBottom: 28 }}>
-      <div className="lock-banner">
-        <div>
-          <div className="eyebrow">{stage.label} · closes in</div>
-          <div className="big">{remaining}</div>
-          <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>
-            Locks {stage.lockAt ? lockFmt.format(stage.lockAt) : '—'}
+      {stage.registrationLocked ? (
+        <div className="lock-banner">
+          <div>
+            <div className="eyebrow">{stage.label}</div>
+            <div className="big">Umfar læst</div>
+            <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>
+              Tú kanst tillaga tær dystir, ið ikki eru byrjaðir enn.
+            </div>
           </div>
+          <span className="chip locked"><span className="mono">{done}/{all}</span></span>
         </div>
-        <span className="chip open"><span className="mono">{done}/{all}</span> set</span>
-      </div>
+      ) : (
+        <div className="lock-banner">
+          <div>
+            <div className="eyebrow">{stage.label} · læsir um</div>
+            <div className="big">{remaining}</div>
+            <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>
+              Læsir {stage.firstKickoff ? lockFmt.format(stage.firstKickoff) : '—'}
+            </div>
+          </div>
+          <span className="chip open"><span className="mono">{done}/{all}</span></span>
+        </div>
+      )}
 
       <div className="stack">
         {stage.matches.map((m) => {
           const p = picks[m.id] || { h: null, a: null };
-          const isComplete = complete(p);
+          const editable = canEditMatch(m);
+          const saved = savedPicks[m.id];
+          const isSavedNow = saved && complete(p) && saved.h === p.h && saved.a === p.a;
           return (
-            <div className="predict-row" key={m.id}>
+            <div className={`predict-row ${editable ? '' : 'locked-row'}`} key={m.id}>
               <div className="side home">
                 {isConcreteTeam(m.homeTeam) ? <Flag team={m.homeTeam} /> : <span className="flag mono-chip">?</span>}
                 <span className="name">{m.homeTeam?.name || 'TBD'}</span>
               </div>
-              <div className="steppers">
-                <Stepper value={p.h} onChange={(v) => setVal(m.id, 'h', v)} />
+              <div className="score-box">
+                <ScoreInput value={p.h} onChange={(v) => setVal(m.id, 'h', v)} disabled={!editable} ariaLabel="heima mál" />
                 <span className="x">:</span>
-                <Stepper value={p.a} onChange={(v) => setVal(m.id, 'a', v)} />
+                <ScoreInput value={p.a} onChange={(v) => setVal(m.id, 'a', v)} disabled={!editable} ariaLabel="úti mál" />
               </div>
               <div className="side away">
                 {isConcreteTeam(m.awayTeam) ? <Flag team={m.awayTeam} /> : <span className="flag mono-chip">?</span>}
                 <span className="name">{m.awayTeam?.name || 'TBD'}</span>
               </div>
-              {isComplete && savedPicks[m.id] && savedPicks[m.id].h === p.h && savedPicks[m.id].a === p.a && (
-                <div className="your-pick" style={{ borderTop: 0, paddingTop: 0, marginTop: 4 }}>
-                  <span className="label">saved</span><span className="dot" style={{ color: 'var(--win)' }} />
-                </div>
-              )}
+              <div className="meta">
+                <span className="kick muted">
+                  {editable
+                    ? `Tillaga til ${m.kickoff ? editFmt.format(m.kickoff - 60 * 60 * 1000) : '—'}`
+                    : 'Læst'}
+                </span>
+                {isSavedNow && <span className="chip done"><span className="dot" /> goymt</span>}
+              </div>
             </div>
           );
         })}
       </div>
 
-      <button className="btn btn-primary btn-block btn-lg" style={{ marginTop: 16 }}
-        onClick={save} disabled={status === 'saving'}>
-        {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : `Save ${done} prediction${done === 1 ? '' : 's'}`}
-      </button>
-      {done < all && (
+      {anyEditable && (
+        <button className="btn btn-primary btn-block btn-lg" style={{ marginTop: 16 }}
+          onClick={save} disabled={status === 'saving'}>
+          {status === 'saving' ? 'Goymi…' : status === 'saved' ? 'Goymt ✓' : `Goym tipping (${done}/${all})`}
+        </button>
+      )}
+      {!stage.registrationLocked && done < all && (
         <p className="muted center-text" style={{ marginTop: 10, fontSize: '0.8125rem' }}>
-          {all - done} match{all - done === 1 ? '' : 'es'} still unpredicted. You can come back and finish before the lock.
+          {all - done} {all - done === 1 ? 'dystur' : 'dystir'} ógoymdir. Øll skulu vera tippað áðrenn umfarið læsir.
         </p>
       )}
     </section>
   );
 }
 
-function NothingOpen({ stages, now }) {
-  // Find the next stage that exists but isn't open yet (teams not known) or
-  // the next thing to wait for.
+function NothingOpen({ stages }) {
   const future = stages.find((s) => s.count > 0 && !s.locked && !s.open && !s.finished);
-  const nextLocked = stages.find((s) => s.open === false && s.locked && !s.finished);
   return (
     <div className="empty">
-      <div className="big">Nothing to predict right now</div>
+      <div className="big">Eingin tipping júst nú</div>
       {future
-        ? <p>The {future.label.toLowerCase()} opens for predictions as soon as the teams are confirmed. Sit tight.</p>
-        : nextLocked
-          ? <p>The current stage is locked. The next round opens once those teams are decided.</p>
-          : <p>Predictions will open here automatically when the next stage's fixtures land.</p>}
+        ? <p>{future.label} opnar fyri tipping, so skjótt liðini eru greið.</p>
+        : <p>Tipping opnar her sjálvvirkandi, tá ið næsta umfar er klárt.</p>}
     </div>
   );
 }
 
-function UpcomingHint({ stages, now }) {
+function UpcomingHint({ stages }) {
   const future = stages.filter((s) => s.count > 0 && !s.open && !s.locked && !s.finished);
   if (!future.length) return null;
   return (
     <p className="muted center-text" style={{ marginTop: 8, fontSize: '0.8125rem' }}>
-      Next: {future.map((s) => s.label).join(', ')} will open when the teams are confirmed.
+      Næst: {future.map((s) => s.label).join(', ')} opnar tá liðini eru greið.
     </p>
   );
 }

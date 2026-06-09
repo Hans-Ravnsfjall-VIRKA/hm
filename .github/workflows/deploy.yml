@@ -28,16 +28,9 @@ jobs:
 
       - run: npm ci
 
-      # Vite inlines VITE_* vars at build time. They identify the Firebase
-      # project and are safe to expose; access is gated by Firestore rules.
+      # The Firebase web config is baked into src/firebase.js (it is public by
+      # design), so the build needs no secrets.
       - name: Build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3

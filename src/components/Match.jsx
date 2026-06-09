@@ -1,4 +1,3 @@
-import { PlusIcon, MinusIcon } from './icons';
 import { isConcreteTeam } from '../lib/tournament';
 
 const dtf = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -60,15 +59,15 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
       <TeamSide team={awayTeam} side="away" />
       {(yourPick || yourPoints != null) && (
         <div className="your-pick">
-          <span className="label">Your pick</span>
+          <span className="label">Tipping</span>
           <span>
             {yourPick
               ? <span className="val mono">{yourPick.h}:{yourPick.a}</span>
-              : <span className="muted">none</span>}
+              : <span className="muted">eingin</span>}
             {yourPoints != null && (
               <span className={`pts-badge ${yourPoints >= 6 ? 'exact' : yourPoints > 0 ? 'scored' : 'zero'}`}
                 style={{ marginLeft: 8 }}>
-                {yourPoints > 0 ? `+${yourPoints}` : '0'} {scoreText || 'pts'}
+                {yourPoints > 0 ? `+${yourPoints}` : '0'} {scoreText || 'stig'}
               </span>
             )}
           </span>
@@ -78,22 +77,27 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
   );
 }
 
-/** Plus/minus number stepper. value may be null (= not yet predicted): the
- *  field shows a dash until the player taps, so a real 0 is distinguishable
- *  from "no pick". From null: minus -> 0, plus -> 1. */
-export function Stepper({ value, onChange, disabled, max = 19 }) {
-  const isSet = Number.isInteger(value);
-  const dec = () => onChange(isSet ? Math.max(0, value - 1) : 0);
-  const inc = () => onChange(isSet ? Math.min(max, value + 1) : 1);
+/** Numeric score field. value may be null (= not yet tipped): the field shows
+ *  a placeholder until typed, so a real 0 is distinguishable from "no pick".
+ *  Digits only, max 2, mobile shows a number keypad. */
+export function ScoreInput({ value, onChange, disabled, ariaLabel }) {
+  const shown = Number.isInteger(value) ? String(value) : '';
+  const handle = (e) => {
+    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+    onChange(digits === '' ? null : parseInt(digits, 10));
+  };
   return (
-    <div className="stepper">
-      <button disabled={disabled || (isSet && value <= 0)} onClick={dec} aria-label="minus">
-        <MinusIcon width={18} height={18} />
-      </button>
-      <span className="val">{isSet ? value : '–'}</span>
-      <button disabled={disabled || (isSet && value >= max)} onClick={inc} aria-label="plus">
-        <PlusIcon width={18} height={18} />
-      </button>
-    </div>
+    <input
+      className={`score-in ${Number.isInteger(value) ? 'filled' : ''}`}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      maxLength={2}
+      value={shown}
+      placeholder="–"
+      disabled={disabled}
+      onChange={handle}
+      aria-label={ariaLabel}
+    />
   );
 }

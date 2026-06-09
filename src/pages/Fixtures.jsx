@@ -4,8 +4,7 @@ import { useTournamentCtx } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
 import { MatchRow } from '../components/Match';
 import { scorePick } from '../lib/scoring';
-
-const dayFmt = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+import { foDayShort } from '../lib/foDate';
 
 export default function Fixtures() {
   const { stages, standings, predictionDocs, loaded } = useTournamentCtx();
@@ -23,23 +22,22 @@ export default function Fixtures() {
   if (!available.length) {
     return (
       <>
-        <div className="page-head"><h1>Fixtures</h1></div>
-        <div className="empty"><div className="big">No fixtures yet</div>
-          <p>Match data appears here as soon as the first sync runs.</p></div>
+        <div className="page-head"><h1>Dystir</h1></div>
+        <div className="empty"><div className="big">Eingir dystir enn</div>
+          <p>Dystirnir koma higar, so skjótt fyrsta dátuhenting hevur koyrt.</p></div>
       </>
     );
   }
 
-  // Group this stage's matches by local day.
   const byDay = {};
   for (const m of stage.matches) {
-    const key = m.kickoff ? dayFmt.format(m.kickoff) : 'TBD';
+    const key = m.kickoff ? foDayShort(m.kickoff) : 'Óvist';
     (byDay[key] ||= []).push(m);
   }
 
   return (
     <>
-      <div className="page-head"><h1>Fixtures</h1></div>
+      <div className="page-head"><h1>Dystir</h1></div>
 
       <div className="seg" style={{ overflowX: 'auto' }}>
         {available.map((s) => (
@@ -52,8 +50,8 @@ export default function Fixtures() {
 
       {stage.id === 'group' && standings.length > 0 && (
         <div className="seg">
-          <button className={view === 'matches' ? 'active' : ''} onClick={() => setView('matches')}>Matches</button>
-          <button className={view === 'standings' ? 'active' : ''} onClick={() => setView('standings')}>Standings</button>
+          <button className={view === 'matches' ? 'active' : ''} onClick={() => setView('matches')}>Dystir</button>
+          <button className={view === 'standings' ? 'active' : ''} onClick={() => setView('standings')}>Bólkar</button>
         </div>
       )}
 
@@ -84,7 +82,7 @@ function Standings({ groups }) {
           <div className="day-label" style={{ marginTop: 0 }}>{g.name}</div>
           <table className="standings-table">
             <thead>
-              <tr><th></th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr>
+              <tr><th></th><th>Lið</th><th>D</th><th>V</th><th>U</th><th>T</th><th>MD</th><th>St</th></tr>
             </thead>
             <tbody>
               {g.table.map((r, i) => (

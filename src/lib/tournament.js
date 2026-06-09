@@ -1,17 +1,20 @@
 // ---------------------------------------------------------------------------
-// VIRKA Tippi — tournament structure & lock logic
+// VIRKA Tippi - tournament structure & lock logic
 //
-// A "stage" is a block of matches that lock together. The rule for this
-// competition: every match in a stage must be predicted before the FIRST
-// match of that stage kicks off. The group stage is one block (all 72 group
-// matches lock when Mexico v South Africa kicks off on 11 June). Each
-// knockout round is its own block and locks at its own first kickoff.
+// Locking rule for this competition:
+//  - Every match in a stage (umfar) must be tipped before that stage's FIRST
+//    match kicks off. That first kickoff is the registration deadline.
+//  - After the deadline the stage is locked: nobody who didn't complete it in
+//    time can enter it.
+//  - If you DID complete the whole stage, you may still adjust any individual
+//    match until 1 hour before that match's own kickoff. Each pick then
+//    freezes at the 1-hour mark.
 //
-// Knockout fixtures appear in the data with placeholder teams until the
-// groups finish, then the real teams populate automatically. We only let
-// people predict a knockout match once both teams are concrete, and we only
-// lock the stage once its first real kickoff passes.
+// Knockout fixtures arrive with placeholder teams until the groups finish,
+// then the real teams populate and the stage opens automatically.
 // ---------------------------------------------------------------------------
+
+export const EDIT_CUTOFF_MS = 60 * 60 * 1000; // 1 hour before kickoff
 
 export const STAGES = [
   { id: 'group', label: 'Group stage', short: 'Groups', order: 1 },
@@ -25,12 +28,11 @@ export const STAGES = [
 
 export const STAGE_BY_ID = Object.fromEntries(STAGES.map((s) => [s.id, s]));
 
-/** Map an API round string to one of our stage ids. */
 export function stageFromRound(round = '') {
   const r = round.toLowerCase();
   if (r.includes('group')) return 'group';
-  if (r.includes('round of 32') || r.includes('round-of-32')) return 'r32';
-  if (r.includes('round of 16') || r.includes('8th') || r.includes('round-of-16')) return 'r16';
+  if (r.includes('32')) return 'r32';
+  if (r.includes('16') || r.includes('8th')) return 'r16';
   if (r.includes('quarter')) return 'qf';
   if (r.includes('semi')) return 'sf';
   if (r.includes('3rd') || r.includes('third')) return 'third';
@@ -40,7 +42,6 @@ export function stageFromRound(round = '') {
 
 const PLACEHOLDER = /(winner|runner|loser|group [a-l]\b|tbd|to be determined|1[a-l]\b|2[a-l]\b|\/)/i;
 
-/** A team slot is "concrete" once a real nation is assigned to it. */
 export function isConcreteTeam(team) {
   if (!team || !team.name) return false;
   if (PLACEHOLDER.test(team.name)) return false;
@@ -51,10 +52,18 @@ export function matchHasTeams(m) {
   return isConcreteTeam(m.homeTeam) && isConcreteTeam(m.awayTeam);
 }
 
+/** When a single match's pick freezes: 1 hour before kickoff. */
+export function matchEditDeadline(m) {
+  return m.kickoff ? m.kickoff - EDIT_CUTOFF_MS : null;
+}
+
+/** Can this individual match still be edited (purely on time)? */
+export function matchEditable(m, now = Date.now()) {
+  return m.kickoff != null && now < m.kickoff - EDIT_CUTOFF_MS;
+}
+
 /**
  * Group matches into stages and compute lock state for each.
- * @param {Array} matches normalized match objects
- * @param {number} now epoch ms
  */
 export function buildStages(matches, now = Date.now()) {
   const byStage = {};
@@ -63,54 +72,77 @@ export function buildStages(matches, now = Date.now()) {
   }
 
   return STAGES.map((stage) => {
-    const all = (byStage[stage.id] || []).sort((a, b) => a.kickoff - b.kickoff);
+    const all = (byStage[stage.id] || []).sort((a, b) => (a.kickoff || 0) - (b.kickoff || 0));
     const concrete = all.filter(matchHasTeams);
-    // Lock time = first kickoff among matches that actually have teams.
     const kickoffs = concrete.map((m) => m.kickoff).filter(Boolean);
-    const lockAt = kickoffs.length ? Math.min(...kickoffs) : null;
+    const firstKickoff = kickoffs.length ? Math.min(...kickoffs) : null;
 
     const exists = all.length > 0;
     const teamsKnown = concrete.length === all.length && all.length > 0;
-    const locked = lockAt != null && now >= lockAt;
-    // Predictable: the stage exists, every match has real teams, and it
-    // hasn't locked yet.
-    const open = exists && teamsKnown && !locked;
+    // Registration closes when the first match of the stage kicks off.
+    const registrationLocked = firstKickoff != null && now >= firstKickoff;
+    const open = exists && teamsKnown && !registrationLocked;
     const finished = exists && all.every((m) => m.finished);
+    // Any match still inside its edit window?
+    const hasEditable = concrete.some((m) => matchEditable(m, now));
 
     return {
       ...stage,
       matches: all,
       count: all.length,
-      lockAt,
-      locked,
+      lockAt: firstKickoff,
+      firstKickoff,
+      registrationLocked,
+      locked: registrationLocked, // back-compat alias
       teamsKnown,
       open,
+      hasEditable,
       finished,
     };
   });
 }
 
-/** The stage(s) a player can currently predict, earliest first. */
+/** True if the player has a saved pick for every concrete match in the stage. */
+export function stageComplete(stage, picks) {
+  const concrete = stage.matches.filter(matchHasTeams);
+  if (!concrete.length) return false;
+  return concrete.every((m) => {
+    const p = picks?.[m.id];
+    return p && Number.isInteger(p.h) && Number.isInteger(p.a);
+  });
+}
+
+/**
+ * Stages a player can act on now in the Tipping screen:
+ *  - still open for registration, OR
+ *  - already locked but the player completed it and some match is still
+ *    inside its 1-hour edit window.
+ */
+export function tippableStages(stages, picks) {
+  return stages.filter((s) => {
+    if (!s.teamsKnown || !s.count || s.finished) return false;
+    if (s.open) return true;
+    return s.hasEditable && stageComplete(s, picks);
+  });
+}
+
 export function openStages(stages) {
   return stages.filter((s) => s.open);
 }
 
-/** Friendly remaining-time string for a lock countdown. */
 export function timeUntil(ts, now = Date.now()) {
   if (ts == null) return '';
   let s = Math.max(0, Math.floor((ts - now) / 1000));
-  if (s <= 0) return 'locked';
+  if (s <= 0) return 'læst';
   const d = Math.floor(s / 86400); s -= d * 86400;
   const h = Math.floor(s / 3600); s -= h * 3600;
   const m = Math.floor(s / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
+  if (d > 0) return `${d}d ${h}t`;
+  if (h > 0) return `${h}t ${m}m`;
   return `${m}m`;
 }
 
 // --- Group standings, computed live from finished group matches ------------
-// We can show standings even before the API publishes them, and they always
-// match whatever match results we have.
 
 export function computeGroupStandings(matches) {
   const groups = {};

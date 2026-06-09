@@ -1,39 +1,103 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournamentCtx } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
+import { buildLeaderboard } from '../lib/scoring';
+import { foDayKey, foDateShort } from '../lib/foDate';
 
 export default function Leaderboard() {
-  const { leaderboard, matches, loaded } = useTournamentCtx();
+  const { matches, predictionDocs, loaded } = useTournamentCtx();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const finishedCount = matches.filter((m) => m.finished).length;
+
+  const finished = useMemo(
+    () => matches.filter((m) => m.finished && m.result && m.kickoff), [matches]);
+
+  // Distinct match days, ascending. Each is a point in the history.
+  const days = useMemo(() => {
+    const keys = [...new Set(finished.map((m) => foDayKey(m.kickoff)))].sort();
+    return keys.map((k) => {
+      const ts = finished.find((m) => foDayKey(m.kickoff) === k).kickoff;
+      return { key: k, ts };
+    });
+  }, [finished]);
+
+  // 'now' = the live, full standings. A day key = standings as at end of that day.
+  const [sel, setSel] = useState('now');
+
+  const board = useMemo(() => {
+    const upto = sel === 'now' ? finished : finished.filter((m) => foDayKey(m.kickoff) <= sel);
+    return buildLeaderboard(predictionDocs, upto);
+  }, [sel, finished, predictionDocs]);
+
+  // Movement vs the previous day in the history.
+  const prevRanks = useMemo(() => {
+    let prevKey = null;
+    if (sel === 'now') prevKey = days.length ? days[days.length - 1].key : null;
+    else {
+      const i = days.findIndex((d) => d.key === sel);
+      prevKey = i > 0 ? days[i - 1].key : null;
+    }
+    if (!prevKey) return null;
+    const upto = finished.filter((m) => foDayKey(m.kickoff) <= prevKey);
+    const prev = buildLeaderboard(predictionDocs, upto);
+    return Object.fromEntries(prev.map((r) => [r.uid, r.rank]));
+  }, [sel, days, finished, predictionDocs]);
 
   if (!loaded) return <div className="spinner" />;
 
   return (
     <>
       <div className="page-head">
-        <h1>Leaderboard</h1>
-        <p>{leaderboard.length} player{leaderboard.length === 1 ? '' : 's'} · {finishedCount} match{finishedCount === 1 ? '' : 'es'} scored</p>
+        <h1>Støða</h1>
+        <p>{board.length} {board.length === 1 ? 'spælari' : 'spælarar'} · {finished.length} {finished.length === 1 ? 'dystur liðugur' : 'dystir liðugir'}</p>
       </div>
 
-      {leaderboard.length === 0 ? (
-        <div className="empty"><div className="big">No players yet</div><p>Be the first to register and predict.</p></div>
-      ) : (
-        <div className="stack">
-          {leaderboard.map((r) => (
-            <div key={r.uid}
-              className={`lb-row clickable ${r.uid === user?.uid ? 'me' : ''} ${r.rank <= 3 ? 'podium' : ''}`}
-              onClick={() => navigate(`/player/${r.uid}`)}>
-              <div className="lb-rank">{r.rank}</div>
-              <div>
-                <div className="lb-name">{r.displayName}{r.uid === user?.uid && <span className="muted" style={{ fontWeight: 400 }}> · you</span>}</div>
-                <div className="lb-meta">{r.exact} exact · {r.scored} scoring · {r.played} picks</div>
-              </div>
-              <div className="lb-total">{r.total}<small>pts</small></div>
-            </div>
+      {days.length > 0 && (
+        <div className="hist">
+          <button className={sel === 'now' ? 'active' : ''} onClick={() => setSel('now')}>Nú</button>
+          {days.map((d) => (
+            <button key={d.key} className={sel === d.key ? 'active' : ''} onClick={() => setSel(d.key)}>
+              {foDateShort(d.ts)}
+            </button>
           ))}
         </div>
+      )}
+
+      {board.length === 0 ? (
+        <div className="empty"><div className="big">Eingin spælari enn</div><p>Ver tann fyrsti at stovna brúkara og tippa.</p></div>
+      ) : (
+        <div className="stack">
+          {board.map((r) => {
+            const prev = prevRanks ? prevRanks[r.uid] : null;
+            const delta = prev != null ? prev - r.rank : 0;
+            return (
+              <div key={r.uid}
+                className={`lb-row clickable ${r.uid === user?.uid ? 'me' : ''} ${r.rank <= 3 ? 'podium' : ''}`}
+                onClick={() => navigate(`/player/${r.uid}`)}>
+                <div className="lb-rank">{r.rank}</div>
+                <div>
+                  <div className="lb-name">
+                    {r.displayName}{r.uid === user?.uid && <span className="muted" style={{ fontWeight: 400 }}> · tú</span>}
+                    {delta !== 0 && (
+                      <span className={`lb-move ${delta > 0 ? 'up' : 'down'}`}>
+                        {delta > 0 ? `▲${delta}` : `▼${Math.abs(delta)}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="lb-meta">{r.exact} neyvt · {r.played} tippað</div>
+                </div>
+                <div className="lb-total">{r.total}<small>stig</small></div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {sel !== 'now' && (
+        <p className="muted center-text" style={{ marginTop: 14, fontSize: '0.8125rem' }}>
+          Støðan sum hon var eftir {foDateShort(days.find((d) => d.key === sel)?.ts)}.
+        </p>
       )}
     </>
   );

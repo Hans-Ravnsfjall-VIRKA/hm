@@ -14,6 +14,9 @@ export const PredictIcon = (p) => (
 export const BoardIcon = (p) => (
   <svg viewBox="0 0 24 24" {...p}><path d="M6 20V11M12 20V5M18 20v-6" {...s} /></svg>
 );
+export const RulesIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...p}><path d="M6 3.5h9l3.5 3.5v13.5H6z" {...s} /><path d="M14.5 3.5V7.5H18.5M8.5 12h7M8.5 16h7" {...s} /></svg>
+);
 export const PlusIcon = (p) => (<svg viewBox="0 0 24 24" {...p}><path d="M12 6v12M6 12h12" {...s} /></svg>);
 export const MinusIcon = (p) => (<svg viewBox="0 0 24 24" {...p}><path d="M6 12h12" {...s} /></svg>);
 export const ChevronIcon = (p) => (<svg viewBox="0 0 24 24" {...p}><path d="m9 6 6 6-6 6" {...s} /></svg>);

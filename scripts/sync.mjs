@@ -1,34 +1,28 @@
 // ---------------------------------------------------------------------------
-// VIRKA Tippi — data sync
+// VIRKA Tippi - data sync (ESPN public feed)
 //
-// Pulls World Cup 2026 fixtures + live scores from API-Football and writes
-// normalized match documents into Firestore. Clients only ever READ Firestore,
-// so the API key and the Firebase service account stay server-side (in GitHub
-// Actions secrets). This is what makes the "next stage appears automatically,
-// no admin needed" behaviour work: knockout fixtures populate real teams as
-// the groups conclude, and the next run writes them straight through.
+// Pulls World Cup 2026 fixtures + live scores from ESPN's public scoreboard.
+// No API key required. Clients only ever READ Firestore; this script is the
+// only writer. Knockout fixtures appear automatically as ESPN publishes them,
+// which is what drives the "next stage opens on its own" behaviour.
 //
-// Run locally to seed:   npm run sync
-// Run on a schedule:      .github/workflows/sync.yml (cron)
-//
-// Required environment variables:
-//   APIFOOTBALL_KEY                 API-Football (api-sports.io) key
-//   FIREBASE_SERVICE_ACCOUNT        base64-encoded service-account JSON
-//     (or) GOOGLE_APPLICATION_CREDENTIALS  path to the JSON file (local dev)
-//   LEAGUE_ID                       optional, default 1  (World Cup)
-//   SEASON                          optional, default 2026
+// Run locally to seed:  npm run sync
+// Credentials: GOOGLE_APPLICATION_CREDENTIALS (local) or
+//              FIREBASE_SERVICE_ACCOUNT (base64, for CI).
 // ---------------------------------------------------------------------------
 
 import admin from 'firebase-admin';
+import { readFileSync } from 'node:fs';
 
-const API_BASE = 'https://v3.football.api-sports.io';
-const LEAGUE_ID = Number(process.env.LEAGUE_ID || 1);
-const SEASON = Number(process.env.SEASON || 2026);
-const API_KEY = process.env.APIFOOTBALL_KEY;
+const LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
 
-if (!API_KEY) {
-  console.error('Missing APIFOOTBALL_KEY environment variable.');
-  process.exit(1);
+// The tournament window, fetched in chunks so ESPN never caps a single range.
+const RANGES = (process.env.WC_RANGES || '20260611-20260620,20260620-20260630,20260630-20260710,20260710-20260721')
+  .split(',')
+  .map((r) => r.trim());
+
+function scoreboardUrl(range) {
+  return `https://site.api.espn.com/apis/site/v2/sports/soccer/${LEAGUE}/scoreboard?dates=${range}&limit=1000`;
 }
 
 // --- Firebase admin init ---------------------------------------------------
@@ -38,119 +32,119 @@ function initFirebase() {
   const b64 = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (b64) {
     const json = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-    return admin.initializeApp({ credential: admin.credential.cert(json) });
+    return admin.initializeApp({ credential: admin.credential.cert(json), projectId: json.project_id });
   }
-  // Falls back to GOOGLE_APPLICATION_CREDENTIALS (a path to a JSON file).
-  return admin.initializeApp({ credential: admin.credential.applicationDefault() });
+
+  const path = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (path) {
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    return admin.initializeApp({ credential: admin.credential.cert(json), projectId: json.project_id });
+  }
+
+  console.error('No credentials found. Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT.');
+  process.exit(1);
 }
 
-// --- API helpers -----------------------------------------------------------
-async function apiGet(path, params = {}) {
-  const url = new URL(API_BASE + path);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url, { headers: { 'x-apisports-key': API_KEY } });
-  if (!res.ok) throw new Error(`API ${path} -> ${res.status} ${res.statusText}`);
-  const data = await res.json();
-  if (data.errors && Object.keys(data.errors).length) {
-    console.warn('API warnings:', JSON.stringify(data.errors));
-  }
-  return data.response || [];
-}
-
-// --- Stage mapping (kept in sync with src/lib/tournament.js) ----------------
-function stageFromRound(round = '') {
-  const r = round.toLowerCase();
-  if (r.includes('group')) return 'group';
-  if (r.includes('round of 32') || r.includes('round-of-32')) return 'r32';
-  if (r.includes('round of 16') || r.includes('8th') || r.includes('round-of-16')) return 'r16';
-  if (r.includes('quarter')) return 'qf';
-  if (r.includes('semi')) return 'sf';
-  if (r.includes('3rd') || r.includes('third')) return 'third';
-  if (r.includes('final')) return 'final';
+// --- Stage mapping ---------------------------------------------------------
+// Map ESPN's season slug to our stage ids. Order matters: quarter/semi finals
+// contain the word "final", so they are checked before the final itself.
+function stageFromSlug(slug = '') {
+  const s = slug.toLowerCase();
+  if (s.includes('group')) return 'group';
+  if (s.includes('32')) return 'r32';
+  if (s.includes('16')) return 'r16';
+  if (s.includes('quarter')) return 'qf';
+  if (s.includes('semi')) return 'sf';
+  if (s.includes('third') || s.includes('3rd')) return 'third';
+  if (s.includes('final')) return 'final';
   return 'group';
 }
 
-// API-Football short status codes.
-const LIVE_STATUS = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT']);
-const DONE_STATUS = new Set(['FT', 'AET', 'PEN']);
+// --- Normalize one ESPN event into our match document ----------------------
+function normalizeEvent(ev) {
+  const comp = ev.competitions?.[0] || {};
+  const stype = comp.status?.type || {};
+  const state = stype.state;          // 'pre' | 'in' | 'post'
+  const live = state === 'in';
+  const finished = state === 'post' && !!stype.completed;
+  const kickoff = ev.date ? Date.parse(ev.date) : null;
+  const slug = ev.season?.slug || '';
+  const stageId = stageFromSlug(slug);
 
-// Extract a group label ("Group A") from the round string when present.
-function groupFromRound(round = '') {
-  const m = round.match(/group\s+([a-l])/i);
-  return m ? `Group ${m[1].toUpperCase()}` : null;
-}
+  const sideBy = (which) =>
+    comp.competitors?.find((c) => c.homeAway === which)
+    || comp.competitors?.[which === 'home' ? 0 : 1];
+  const home = sideBy('home');
+  const away = sideBy('away');
 
-function pickResult(goals, score, status) {
-  // Prefer the 90-minute / fulltime scoreline for scoring consistency. If the
-  // match went to extra time or penalties we still score on fulltime (90+ET as
-  // reported in `fulltime`), per the competition's documented decision.
-  const ft = score?.fulltime;
-  if (ft && ft.home != null && ft.away != null) {
-    return { h: ft.home, a: ft.away };
-  }
-  if (goals && goals.home != null && goals.away != null) {
-    return { h: goals.home, a: goals.away };
-  }
-  return null;
-}
-
-function normalize(fx) {
-  const { fixture, league, teams, goals, score } = fx;
-  const round = league?.round || '';
-  const stageId = stageFromRound(round);
-  const status = fixture?.status?.short || 'NS';
-  const live = LIVE_STATUS.has(status);
-  const finished = DONE_STATUS.has(status);
-  const kickoff = fixture?.timestamp ? fixture.timestamp * 1000 : null;
-  const result = (live || finished) ? pickResult(goals, score, status) : null;
-
-  const team = (t) => ({
-    id: t?.id ?? null,
-    name: t?.name ?? 'TBD',
-    code: t?.code ?? null,
-    flag: t?.logo ?? null, // API-Football uses round flag-style logos for nations
+  const team = (c) => ({
+    id: c?.team?.id ?? null,
+    name: c?.team?.displayName ?? 'TBD',
+    code: c?.team?.abbreviation ?? null,
+    flag: c?.team?.logo ?? null,
   });
 
+  const num = (c) => {
+    const n = parseInt(c?.score, 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  const result = (live || finished) && num(home) != null && num(away) != null
+    ? { h: num(home), a: num(away) }
+    : null;
+
+  let status = 'NS';
+  if (finished) status = 'FT';
+  else if (live) status = 'LIVE';
+
   return {
-    id: String(fixture.id),
+    id: String(ev.id),
     stageId,
-    round,
-    matchday: round,
-    group: stageId === 'group' ? groupFromRound(round) : null,
+    round: slug,
+    matchday: slug,
+    group: null, // ESPN scoreboard does not tag group letters
     kickoff,
-    date: fixture?.date || null,
-    venue: fixture?.venue?.name || null,
-    city: fixture?.venue?.city || null,
-    homeTeam: team(teams?.home),
-    awayTeam: team(teams?.away),
+    date: ev.date || null,
+    venue: comp.venue?.fullName || null,
+    city: comp.venue?.address?.city || null,
+    homeTeam: team(home),
+    awayTeam: team(away),
     status,
     live,
     finished,
-    elapsed: fixture?.status?.elapsed ?? null,
+    elapsed: comp.status?.clock ? Math.round(comp.status.clock / 60) : null,
     result,
   };
+}
+
+async function fetchRange(range) {
+  const res = await fetch(scoreboardUrl(range), { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`ESPN ${range} -> ${res.status} ${res.statusText}`);
+  const data = await res.json();
+  return data.events || [];
 }
 
 // --- Main ------------------------------------------------------------------
 async function main() {
   initFirebase();
   const db = admin.firestore();
+  console.log(`Writing to Firestore project: ${admin.app().options.projectId || '(default)'}`);
 
-  console.log(`Fetching fixtures: league=${LEAGUE_ID} season=${SEASON} ...`);
-  const fixtures = await apiGet('/fixtures', { league: LEAGUE_ID, season: SEASON });
-  console.log(`Got ${fixtures.length} fixtures.`);
-
-  if (!fixtures.length) {
-    console.warn('No fixtures returned. Check league id / season / plan access.');
+  // Fetch each window and dedupe by event id.
+  const byId = new Map();
+  for (const range of RANGES) {
+    console.log(`Fetching ESPN scoreboard ${range} ...`);
+    const events = await fetchRange(range);
+    for (const ev of events) byId.set(String(ev.id), ev);
   }
+  const events = [...byId.values()];
+  console.log(`Got ${events.length} matches.`);
+  if (!events.length) console.warn('No events returned. Check the date range / league slug.');
 
-  // Write in batches of up to 400 (Firestore limit is 500 ops per batch).
   let written = 0;
-  for (let i = 0; i < fixtures.length; i += 400) {
-    const slice = fixtures.slice(i, i + 400);
+  const list = events.map(normalizeEvent);
+  for (let i = 0; i < list.length; i += 400) {
     const batch = db.batch();
-    for (const fx of slice) {
-      const m = normalize(fx);
+    for (const m of list.slice(i, i + 400)) {
       batch.set(db.collection('matches').doc(m.id), m, { merge: true });
       written += 1;
     }
@@ -159,16 +153,12 @@ async function main() {
 
   await db.collection('meta').doc('state').set({
     lastSync: Date.now(),
-    season: SEASON,
-    leagueId: LEAGUE_ID,
+    source: 'espn',
     matchCount: written,
-    version: 1,
+    version: 2,
   }, { merge: true });
 
   console.log(`Synced ${written} matches. Done.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch((err) => { console.error(err); process.exit(1); });

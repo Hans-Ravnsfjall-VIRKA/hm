@@ -5,6 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -24,17 +25,11 @@ export function AuthProvider({ children }) {
   async function register({ name, email, password }) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    // Profile doc + an empty predictions doc so the player shows up everywhere.
     await setDoc(doc(db, 'users', cred.user.uid), {
-      displayName: name,
-      email,
-      createdAt: serverTimestamp(),
+      displayName: name, email, createdAt: serverTimestamp(),
     });
     await setDoc(doc(db, 'predictions', cred.user.uid), {
-      uid: cred.user.uid,
-      displayName: name,
-      picks: {},
-      updatedAt: serverTimestamp(),
+      uid: cred.user.uid, displayName: name, picks: {}, updatedAt: serverTimestamp(),
     });
     setUser({ ...cred.user });
     return cred.user;
@@ -48,8 +43,13 @@ export function AuthProvider({ children }) {
     return signOut(auth);
   }
 
+  // Firebase emails a secure reset link and hosts the reset page itself.
+  function resetPassword(email) {
+    return sendPasswordResetEmail(auth, email);
+  }
+
   return (
-    <AuthCtx.Provider value={{ user, ready, register, login, logout }}>
+    <AuthCtx.Provider value={{ user, ready, register, login, logout, resetPassword }}>
       {children}
     </AuthCtx.Provider>
   );

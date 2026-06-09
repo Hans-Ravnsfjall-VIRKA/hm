@@ -1,38 +1,35 @@
 import { APP } from '../config';
 
-// An original, geometric trophy glyph. Deliberately NOT the FIFA mark — that
-// logo is trademarked. Swap this for the official VIRKA brand asset by
-// dropping an SVG/PNG at /public/virka-mark.svg and pointing <BrandMark> at it.
-export function TrophyMark({ size = 30 }) {
+// VIRKA company wordmark. fill:currentColor so it picks up the navy brand
+// colour from CSS (.virka-logo).
+export function VirkaLogo({ className = 'virka-logo' }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <defs>
-        <linearGradient id="cup" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="oklch(0.78 0.16 250)" />
-          <stop offset="1" stopColor="oklch(0.62 0.19 250)" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M9 5h14v4.2c0 4.6-2.8 8-7 8s-7-3.4-7-8z"
-        fill="url(#cup)"
-      />
-      <path d="M9 6.2H6.4a2.4 2.4 0 0 0 0 4.8H10M23 6.2h2.6a2.4 2.4 0 0 1 0 4.8H22"
-        fill="none" stroke="oklch(0.72 0.17 250)" strokeWidth="1.7" strokeLinecap="round" />
-      <rect x="14.7" y="16.5" width="2.6" height="5" fill="oklch(0.68 0.18 250)" />
-      <path d="M11 27h10l-1.2-4.4a1.4 1.4 0 0 0-1.35-1H13.55a1.4 1.4 0 0 0-1.35 1z"
-        fill="oklch(0.7 0.17 250)" />
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804.24 224.01"
+      fill="currentColor" role="img" aria-label="VIRKA">
+      <path d="M362.9,136.19h18.42c24.49,0,33.45-14.23,33.45-40.14v-54.77c0-24.01-6.42-40.62-34.42-40.62h-106.78l19.98,26.94h78.22c13.52,0,16.31,4.65,16.31,18.68v44.79c0,14.6-2.63,18.19-14.92,18.19h-61.57l85.34,114.76h31.07l-65.09-87.82Z" />
+      <rect x="215.77" width="26.91" height="223.52" />
+      <polygon points="87.77 182.72 29.43 .08 0 .08 71.1 223.67 104.15 223.67 175.51 .08 148.27 .08 87.77 182.72" />
+      <rect x="458.77" width="26.9" height="223.52" />
+      <polygon points="578.72 .06 493.26 109.43 578.71 223.81 609.43 223.81 524.87 109.49 610.63 .41 578.72 .06" />
+      <polygon points="733.13 .08 700.08 .08 628.72 223.67 655.95 223.67 716.45 41.02 774.38 222.32 774.8 223.67 804.24 223.67 733.13 .08" />
     </svg>
   );
 }
 
-export function BrandLockup({ compact = false }) {
+// Official competition mark (user-supplied asset).
+export function WcLogo({ className = 'wc-logo' }) {
+  return <img className={className} src="./wc-logo.webp" alt="FIFA World Cup 2026" />;
+}
+
+// Top-bar lockup: VIRKA wordmark + the app's "Tippi" name.
+export function BrandLockup() {
   return (
     <div className="brand">
-      <TrophyMark size={compact ? 26 : 30} />
-      <div style={{ lineHeight: 1.05 }}>
-        <div className="brand-name">{APP.name}</div>
-        {!compact && <div className="brand-sub">{APP.tagline}</div>}
-      </div>
+      <VirkaLogo />
+      <span className="divider" />
+      <span className="tippi">Tippi</span>
     </div>
   );
 }
+
+export default BrandLockup;

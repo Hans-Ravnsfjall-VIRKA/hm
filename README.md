@@ -93,9 +93,9 @@ Confirm the World Cup `league` id / `season` for your API plan (defaults are `1`
 ## Deploy to GitHub Pages
 
 1. Push the repo to GitHub. Settings → **Pages** → Source: **GitHub Actions**.
-2. Add repository **Secrets** (Settings → Secrets and variables → Actions):
-   - Web config (used at build time): `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`
-   - Sync (used by the scheduled job): `APIFOOTBALL_KEY`, and `FIREBASE_SERVICE_ACCOUNT` = your service-account JSON, base64-encoded:
+2. Add repository **Secrets** (Settings → Secrets and variables → Actions). The Firebase web config is already baked into `src/firebase.js`, so the build needs no secrets. You only need the two for the data sync:
+   - `APIFOOTBALL_KEY`
+   - `FIREBASE_SERVICE_ACCOUNT` = your service-account JSON, base64-encoded:
      ```bash
      base64 -i service-account.json | tr -d '\n'   # macOS/Linux; paste the output as the secret
      ```

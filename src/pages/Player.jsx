@@ -6,8 +6,7 @@ import { BackIcon } from '../components/icons';
 import { Flag } from '../components/Match';
 import { scorePick } from '../lib/scoring';
 import { STAGES, STAGE_BY_ID, isConcreteTeam } from '../lib/tournament';
-
-const dtf = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+import { foDateShort, foTime } from '../lib/foDate';
 
 function MiniSide({ team, align }) {
   const concrete = isConcreteTeam(team);
@@ -35,7 +34,6 @@ export default function Player() {
     const byStage = {};
     for (const m of matches) {
       const pick = picks[m.id];
-      // Show every match that has a pick, plus finished matches to expose misses.
       if (!pick && !m.finished) continue;
       (byStage[m.stageId] ||= []).push({ match: m, pick });
     }
@@ -52,8 +50,8 @@ export default function Player() {
   if (!doc) {
     return (
       <>
-        <button className="back" onClick={() => navigate(-1)}><BackIcon width={20} height={20} /> Back</button>
-        <div className="empty"><div className="big">Player not found</div></div>
+        <button className="back" onClick={() => navigate(-1)}><BackIcon width={20} height={20} /> Aftur</button>
+        <div className="empty"><div className="big">Spælari ikki funnin</div></div>
       </>
     );
   }
@@ -62,17 +60,15 @@ export default function Player() {
 
   return (
     <>
-      <button className="back" onClick={() => navigate(-1)}><BackIcon width={20} height={20} /> Back</button>
+      <button className="back" onClick={() => navigate(-1)}><BackIcon width={20} height={20} /> Aftur</button>
 
       <div className="page-head">
-        <h1>{doc.displayName || 'Player'}{isMe && <span className="muted" style={{ fontWeight: 400 }}> · you</span>}</h1>
-        <p>
-          {lbRow ? `Rank ${lbRow.rank} · ${lbRow.total} pts · ${lbRow.exact} exact` : 'No points yet'}
-        </p>
+        <h1>{doc.displayName || 'Spælari'}{isMe && <span className="muted" style={{ fontWeight: 400 }}> · tú</span>}</h1>
+        <p>{lbRow ? `Pláss ${lbRow.rank} · ${lbRow.total} stig · ${lbRow.exact} neyvt` : 'Eingin stig enn'}</p>
       </div>
 
       {grouped.length === 0 ? (
-        <div className="empty"><p>No predictions yet.</p></div>
+        <div className="empty"><p>Ongar tippingar enn.</p></div>
       ) : grouped.map(({ stage, items }) => (
         <section key={stage.id} className="player-stage">
           <div className="section-label">{STAGE_BY_ID[stage.id]?.label || stage.label}</div>
@@ -85,7 +81,7 @@ export default function Player() {
                   <div className="pr-teams">
                     <MiniSide team={match.homeTeam} align="home" />
                     <span className="pr-vs mono">
-                      {result ? `${result.h}:${result.a}` : (match.kickoff ? dtf.format(match.kickoff) : 'TBD')}
+                      {result ? `${result.h}:${result.a}` : (match.kickoff ? foTime(match.kickoff) : 'Óvist')}
                     </span>
                     <MiniSide team={match.awayTeam} align="away" />
                   </div>

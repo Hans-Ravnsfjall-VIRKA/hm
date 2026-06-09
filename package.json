@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "sync": "node scripts/sync.mjs"
+    "sync": "node scripts/sync.mjs",
+    "seed": "node --env-file=.env.local scripts/sync.mjs"
   },
   "dependencies": {
     "firebase": "^10.12.2",

@@ -30,6 +30,5 @@ jobs:
 
       - name: Run sync
         env:
-          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: npm run sync
