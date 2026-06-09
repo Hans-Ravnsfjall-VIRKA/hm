@@ -1,6 +1,5 @@
 import { isConcreteTeam } from '../lib/tournament';
-
-const dtf = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
+import { foTime } from '../lib/foDate';
 
 /** Country flag. Uses the synced flag URL; falls back to a mono monogram. */
 export function Flag({ team }) {
@@ -47,7 +46,7 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
   } else {
     center = (
       <div className="center">
-        <div className="kick">{match.kickoff ? dtf.format(match.kickoff) : '—'}</div>
+        <div className="kick">{match.kickoff ? foTime(match.kickoff) : '—'}</div>
       </div>
     );
   }
