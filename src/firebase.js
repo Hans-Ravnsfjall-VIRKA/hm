@@ -1,19 +1,15 @@
-// ---------------------------------------------------------------------------
-// Firebase init. Config comes from environment variables so nothing secret
-// is committed. Copy .env.example to .env.local and fill in your project's
-// web-app config (Firebase console -> Project settings -> Your apps).
-// ---------------------------------------------------------------------------
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: 'AIzaSyC84YLCP5XgDAK0aT6mVIiAigbuBnxS66Y',
+  authDomain: 'virka-hm26.firebaseapp.com',
+  projectId: 'virka-hm26',
+  storageBucket: 'virka-hm26.firebasestorage.app',
+  messagingSenderId: '676157659307',
+  appId: '1:676157659307:web:6131c15fea358434e27fee',
+  measurementId: 'G-9CVS142FJH',
 };
 
 const app = initializeApp(firebaseConfig);
