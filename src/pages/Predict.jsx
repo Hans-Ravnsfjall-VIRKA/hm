@@ -7,7 +7,7 @@ import {
 } from '../lib/tournament';
 import { foDateTime } from '../lib/foDate';
 
-const LOCK_TEXT = 'Lás allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Síðani verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping upp til 1 tíma áðrenn kick-off';
+const LOCK_TEXT = 'Lás allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Tá fyrsti dystur í umfarinum byrjar, verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping á einkultum dystum upp til 1 tíma áðrenn kick-off, treytað av at hesir vóru tippaðir áðrenn umfarið bleiv læst';
 
 export default function Predict() {
   const { stages, predictionDocs, now, loaded } = useTournamentCtx();

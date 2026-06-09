@@ -17,13 +17,13 @@
 export const EDIT_CUTOFF_MS = 60 * 60 * 1000; // 1 hour before kickoff
 
 export const STAGES = [
-  { id: 'group', label: 'Group stage', short: 'Groups', order: 1 },
-  { id: 'r32', label: 'Round of 32', short: 'R32', order: 2 },
-  { id: 'r16', label: 'Round of 16', short: 'R16', order: 3 },
-  { id: 'qf', label: 'Quarter-finals', short: 'QF', order: 4 },
-  { id: 'sf', label: 'Semi-finals', short: 'SF', order: 5 },
-  { id: 'third', label: 'Third-place play-off', short: '3rd', order: 6 },
-  { id: 'final', label: 'Final', short: 'Final', order: 7 },
+  { id: 'group', label: 'Bólkaspæl', short: 'Bólkar', order: 1 },
+  { id: 'r32', label: 'Knockout – 32 lið', short: '32-lið', order: 2 },
+  { id: 'r16', label: 'Knockout – 16 lið', short: '16-lið', order: 3 },
+  { id: 'qf', label: 'Knockout – 8 lið', short: '8-lið', order: 4 },
+  { id: 'sf', label: 'Hálvfinala', short: 'Hálvf.', order: 5 },
+  { id: 'third', label: 'Dystur um 3. pláss', short: '3. pláss', order: 6 },
+  { id: 'final', label: 'Finala', short: 'Finala', order: 7 },
 ];
 
 export const STAGE_BY_ID = Object.fromEntries(STAGES.map((s) => [s.id, s]));
