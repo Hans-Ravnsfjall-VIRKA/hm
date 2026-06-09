@@ -1,0 +1,35 @@
+name: Sync match data
+
+on:
+  schedule:
+    # Every 10 minutes. Cron runs in UTC. GitHub may delay scheduled runs
+    # under load; that is fine for a prediction league.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # lets you trigger a manual sync from the Actions tab
+
+permissions:
+  contents: read
+
+# Don't pile up runs if one is slow.
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run sync
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: npm run sync

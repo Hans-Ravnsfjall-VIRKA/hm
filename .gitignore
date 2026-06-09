@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# local env / secrets
+.env
+.env.local
+.env.*.local
+
+# Firebase service account — NEVER commit this
+service-account.json
+*-service-account.json
+serviceAccount*.json
+
+# logs / os
+npm-debug.log*
+.DS_Store
