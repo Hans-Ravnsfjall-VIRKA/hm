@@ -17,12 +17,12 @@ export default function Rules() {
               <tr><td className="pp">0</td><td>Skeivt úrslit (skeivur vinnari ella skeivur javnleikur).</td></tr>
               <tr><td className="pp">3</td><td>Rætt úrslit: rættur vinnari, ella rættur javnleikur.</td></tr>
               <tr><td className="pp">4</td><td>Rætt úrslit og mál hjá einum liðinum eru rætt.</td></tr>
-              <tr><td className="pp">6</td><td>Neyvt úrslit: bæði tøl eru rætt.</td></tr>
-              <tr><td className="pp">+1</td><td>Fyri hvørt mál meir enn 4 í einum neyvum úrsliti.</td></tr>
+              <tr><td className="pp">6</td><td>Rætt úrslit: bæði tøl eru rætt.</td></tr>
+              <tr><td className="pp">+1</td><td>Fyri hvørt mál meir enn 4 í einum rættum úrsliti.</td></tr>
             </tbody>
           </table>
           <p style={{ marginTop: 10 }}>
-            Dømi: neyvt 3-2 (5 mál tilsamans) gevur 7 stig. Neyvt 4-2 gevur 8 stig. Neyvt 2-2 gevur 6 stig.
+            Dømi: rætt 3-2 (5 mál tilsamans) gevur 7 stig. Rætt 4-2 gevur 8 stig. Rætt 2-2 gevur 6 stig.
             Bonusstigini galda bert, tá úrslitið er rætt.
           </p>
         </div>

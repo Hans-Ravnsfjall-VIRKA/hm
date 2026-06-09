@@ -64,7 +64,7 @@ export default function Player() {
 
       <div className="page-head">
         <h1>{doc.displayName || 'Spælari'}{isMe && <span className="muted" style={{ fontWeight: 400 }}> · tú</span>}</h1>
-        <p>{lbRow ? `Pláss ${lbRow.rank} · ${lbRow.total} stig · ${lbRow.exact} neyvt` : 'Eingin stig enn'}</p>
+        <p>{lbRow ? `Pláss ${lbRow.rank} · ${lbRow.total} stig · ${lbRow.exact} rætt` : 'Eingin stig enn'}</p>
       </div>
 
       {grouped.length === 0 ? (

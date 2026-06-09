@@ -50,7 +50,7 @@ export default function Leaderboard() {
     <>
       <div className="page-head">
         <h1>Støða</h1>
-        <p>{board.length} {board.length === 1 ? 'spælari' : 'spælarar'} · {finished.length} {finished.length === 1 ? 'dystur liðugur' : 'dystir liðugir'}</p>
+        <p>{board.length} {board.length === 1 ? 'spælari' : 'spælarar'} · {finished.length} {finished.length === 1 ? 'dystur liðin' : 'dystir lidnir'}</p>
       </div>
 
       {days.length > 0 && (
@@ -85,7 +85,7 @@ export default function Leaderboard() {
                       </span>
                     )}
                   </div>
-                  <div className="lb-meta">{r.exact} neyvt · {r.played} tippað</div>
+                  <div className="lb-meta">{r.exact} rætt · {r.played} tippað</div>
                 </div>
                 <div className="lb-total">{r.total}<small>stig</small></div>
               </div>
