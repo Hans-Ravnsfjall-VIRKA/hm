@@ -476,3 +476,8 @@ body { font-size: 1.0625rem; }
 .ev-mark.red { background: var(--live); border-radius: 2px; width: 8px; height: 11px; }
 .ev-text { color: var(--text); min-width: 0; }
 .ev-team { color: var(--text-3); font-size: 0.75rem; font-weight: 700; }
+
+/* Larger date labels ("hós 11. jun") and larger top-right meta text. */
+.day-label { font-size: 0.8125rem; }
+.you-chip .pts { font-size: 1.1875rem; }
+.you-chip .lbl { font-size: 0.75rem; }

@@ -68,7 +68,7 @@ export default function Profile() {
         <button className="btn btn-block" onClick={changePassword}>Broyt loyniorð</button>
         {notice && <div className="notice">{notice}</div>}
         <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }}
-          onClick={() => logout().then(() => navigate('/'))}>Far út</button>
+          onClick={() => logout().then(() => navigate("/"))}>Rita út</button>
       </div>
     </>
   );
