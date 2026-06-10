@@ -13,6 +13,7 @@ import Rules from './pages/Rules';
 import Profile from './pages/Profile';
 import MatchDetail from './pages/MatchDetail';
 import Player from './pages/Player';
+import UpdateBanner from './components/UpdateBanner';
 
 // Where to land: if a stage is open for tipping and the player hasn't filled
 // it in, take them to Tipping. Otherwise show Í dag.
@@ -60,6 +61,7 @@ export default function App() {
       <HashRouter>
         <Gate />
       </HashRouter>
+      <UpdateBanner />
     </AuthProvider>
   );
 }

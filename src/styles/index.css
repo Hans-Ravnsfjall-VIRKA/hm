@@ -524,3 +524,18 @@ body { font-size: 1.0625rem; }
     background: var(--bg); }
   #root { display: none; }
 }
+
+/* In-app update banner (shows when a newer build is deployed). */
+.update-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 120;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: var(--accent); color: var(--accent-text); box-shadow: var(--shadow);
+  animation: slidedown 0.3s var(--ease);
+}
+.update-banner span { font-weight: 600; font-size: 0.95rem; }
+.update-banner button {
+  flex: 0 0 auto; background: var(--accent-text); color: var(--accent); border: 0;
+  border-radius: var(--r-pill); padding: 8px 15px; font-weight: 700; font-size: 0.875rem;
+}
+@keyframes slidedown { from { transform: translateY(-100%); } to { transform: none; } }
