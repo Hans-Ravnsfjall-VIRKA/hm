@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { BrandLockup } from './Brand';
 import { TodayIcon, FixturesIcon, PredictIcon, BoardIcon, RulesIcon, PersonIcon } from './icons';
 import { useAuth } from '../auth/AuthContext';
@@ -17,7 +17,10 @@ export default function Shell() {
   const { user } = useAuth();
   const { leaderboard } = useTournamentCtx();
   const navigate = useNavigate();
+  const location = useLocation();
   const me = leaderboard.find((r) => r.uid === user?.uid);
+  const activeIdx = TABS.findIndex(
+    (t) => location.pathname === t.to || location.pathname.startsWith(`${t.to}/`));
 
   return (
     <div className="shell">
@@ -39,15 +42,12 @@ export default function Shell() {
 
       <div className="tabbar-wrap">
         <nav className="tabbar">
+          <span className="tab-slider" aria-hidden="true"
+            style={{ '--n': TABS.length, '--i': activeIdx, opacity: activeIdx < 0 ? 0 : 1 }} />
           {TABS.map(({ to, label, Icon }) => (
             <NavLink key={to} to={to} className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}>
-              {({ isActive }) => (
-                <>
-                  {isActive && <span className="tab-pill" />}
-                  <Icon />
-                  <span>{label}</span>
-                </>
-              )}
+              <Icon />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
