@@ -514,16 +514,6 @@ body { font-size: 1.0625rem; }
 }
 @media (prefers-reduced-motion: reduce) { .tab-slider { transition: none; } }
 
-/* Portrait guard: on a phone held in landscape, ask the user to rotate.
-   (Installed PWA is already locked to portrait via the manifest.) */
-.rotate-lock { display: none; }
-.rotate-lock-title { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; color: var(--text); margin-bottom: 8px; }
-.rotate-lock-sub { color: var(--text-2); font-size: 1rem; max-width: 320px; }
-@media (orientation: landscape) and (max-height: 520px) {
-  .rotate-lock { display: grid; position: fixed; inset: 0; z-index: 200; place-items: center; text-align: center; padding: 32px;
-    background: var(--bg); }
-  #root { display: none; }
-}
 
 /* In-app update banner (shows when a newer build is deployed). */
 .update-banner {
@@ -539,3 +529,18 @@ body { font-size: 1.0625rem; }
   border-radius: var(--r-pill); padding: 8px 15px; font-weight: 700; font-size: 0.875rem;
 }
 @keyframes slidedown { from { transform: translateY(-100%); } to { transform: none; } }
+
+/* Kill the mobile tap-highlight flash so tab/button taps don't blink. */
+a, button, .tab, .lb-row, .match, .predict-list-row, .player-row, .you-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+.tab { -webkit-touch-callout: none; }
+
+/* Landscape on short phone screens: tighten the chrome so more is usable.
+   The app stays in its centered column; both orientations are supported. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .topbar { padding: 8px 18px; }
+  .page { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .tabbar-wrap { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .auth { min-height: auto; padding-top: 32px; padding-bottom: 32px; }
+}
