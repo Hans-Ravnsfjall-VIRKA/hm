@@ -491,3 +491,12 @@ body { font-size: 1.0625rem; }
 .modal p { color: var(--text-2); font-size: 1rem; line-height: 1.5; margin-bottom: 18px; }
 .modal-actions { display: flex; gap: 10px; }
 .modal-actions .btn { flex: 1; }
+
+/* Player page: align team name / flag / score / flag / name into fixed columns
+   so every match row lines up vertically. */
+.pr-teams { display: grid; grid-template-columns: 1fr 32px minmax(48px, auto) 32px 1fr; align-items: center; gap: 8px; min-width: 0; }
+.pr-name { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pr-name.home { text-align: right; }
+.pr-name.away { text-align: left; }
+.pr-teams .flag { width: 30px; height: 22px; }
+.pr-teams .pr-vs { text-align: center; }

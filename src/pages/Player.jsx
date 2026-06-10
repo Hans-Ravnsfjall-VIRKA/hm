@@ -8,17 +8,6 @@ import { scorePick } from '../lib/scoring';
 import { STAGES, STAGE_BY_ID, isConcreteTeam, matchEditable } from '../lib/tournament';
 import { foDateShort, foTime } from '../lib/foDate';
 
-function MiniSide({ team, align }) {
-  const concrete = isConcreteTeam(team);
-  return (
-    <span className={`mini-side ${align}`}>
-      {align === 'home' && <span className="mini-name">{concrete ? team.name : 'TBD'}</span>}
-      {concrete ? <Flag team={team} /> : <span className="flag mono-chip">?</span>}
-      {align === 'away' && <span className="mini-name">{concrete ? team.name : 'TBD'}</span>}
-    </span>
-  );
-}
-
 export default function Player() {
   const { uid } = useParams();
   const navigate = useNavigate();
@@ -82,11 +71,13 @@ export default function Player() {
               return (
                 <div key={match.id} className="player-row clickable" onClick={() => navigate(`/match/${match.id}`)}>
                   <div className="pr-teams">
-                    <MiniSide team={match.homeTeam} align="home" />
+                    <span className="pr-name home">{isConcreteTeam(match.homeTeam) ? match.homeTeam.name : 'TBD'}</span>
+                    {isConcreteTeam(match.homeTeam) ? <Flag team={match.homeTeam} /> : <span className="flag mono-chip">?</span>}
                     <span className="pr-vs mono">
                       {result ? `${result.h}:${result.a}` : (match.kickoff ? foTime(match.kickoff) : 'Óvist')}
                     </span>
-                    <MiniSide team={match.awayTeam} align="away" />
+                    {isConcreteTeam(match.awayTeam) ? <Flag team={match.awayTeam} /> : <span className="flag mono-chip">?</span>}
+                    <span className="pr-name away">{isConcreteTeam(match.awayTeam) ? match.awayTeam.name : 'TBD'}</span>
                   </div>
                   <div className="pr-pick">
                     <span className="mono">
