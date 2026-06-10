@@ -32,7 +32,7 @@ export default function Rules() {
         <div className="rule-sec">
           <h2>Tipping og læsing</h2>
           <p>Tú mást tippa allar dystir í einum umfari áðrenn fyrsti dysturin byrjar. Tá fyrsti dysturin byrjar, læsir umfarið, og tú kanst ikki skráseta nýggjar dystir.</p>
-          <p>Hevur tú longu tippað øll úrslitini í umfarinum, kanst tú tó tillaga einstakar dystir heilt til 1 tíma áðrenn teir byrja. Ein tími áðrenn ein dystur byrjar, læsir tann dysturin.</p>
+          <p>Tá ið tú hevur tippað øll úrslitini í umfarinum, kanst tú tillaga einstakar dystir framm til ein tíma áðrenn dysturin byrjar.</p>
           <div className="lock-note" style={{ marginTop: 10 }}>{LOCK_TEXT}</div>
         </div>
       </div>
@@ -40,15 +40,14 @@ export default function Rules() {
       <div className="panel" style={{ marginBottom: 14 }}>
         <div className="rule-sec">
           <h2>Nýggj umfør</h2>
-          <p>Tá bólkaspælið er liðugt, koma dystirnir í 32-liða-úrslitinum sjálvvirkandi fram, so skjótt liðini eru greið. Tað sama hendir fyri hvørt knockout-umfar.</p>
+          <p>Tá bólkaspælið er liðugt, koma dystirnir næstu fasu sjálvvirkandi inn, so skjótt tað er avgjørt hvørji lið koma víðari. Tað sama hendir fyri hvørt knockout-umfar.</p>
         </div>
       </div>
 
       <div className="panel">
         <div className="rule-sec">
           <h2>Livescore</h2>
-          <p>Úrslitini koma frá ESPN. Støðan í dystum verður dagførd automatiskt, vanliga hvørja 10. minutt. Telefonin hjá tær dagførir seg sjálv, so skjótt eitt nýtt úrslit er innlisið, tí appin lesur beint úr dátugrunninum.</p>
-          <p>Stig og støða verða roknað beinleiðis í telefonini út frá úrslitunum, so tey eru altíð í samsvari við tað, sum tú sært á skíggjanum.</p>
+          <p>Úrslitini koma frá ESPN. Støðan í dystum verður dagførd automatiskt, vanliga 10. hvønn minutt. Skipanin dagførir sjálv, so skjótt ein nýggj støða er innlisin. Stig og støða verða roknað beinleiðis út frá støðuni tú sært í skipanini, so tað altíð er í samsvari við tað tú sært á skíggjanum.</p>
         </div>
       </div>
     </>

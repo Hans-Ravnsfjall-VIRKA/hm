@@ -48,8 +48,20 @@ export function AuthProvider({ children }) {
     return sendPasswordResetEmail(auth, email);
   }
 
+  // Update the display name everywhere it is read: the Auth profile, the
+  // users doc, and the predictions doc (the leaderboard reads the latter).
+  async function updateName(name) {
+    const u = auth.currentUser;
+    if (!u) throw new Error('Not signed in');
+    const clean = name.trim();
+    await updateProfile(u, { displayName: clean });
+    await setDoc(doc(db, 'users', u.uid), { displayName: clean }, { merge: true });
+    await setDoc(doc(db, 'predictions', u.uid), { uid: u.uid, displayName: clean }, { merge: true });
+    setUser(Object.assign(Object.create(Object.getPrototypeOf(u)), u, { displayName: clean }));
+  }
+
   return (
-    <AuthCtx.Provider value={{ user, ready, register, login, logout, resetPassword }}>
+    <AuthCtx.Provider value={{ user, ready, register, login, logout, resetPassword, updateName }}>
       {children}
     </AuthCtx.Provider>
   );

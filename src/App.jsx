@@ -10,6 +10,7 @@ import Fixtures from './pages/Fixtures';
 import Predict from './pages/Predict';
 import Leaderboard from './pages/Leaderboard';
 import Rules from './pages/Rules';
+import Profile from './pages/Profile';
 import MatchDetail from './pages/MatchDetail';
 import Player from './pages/Player';
 
@@ -43,6 +44,7 @@ function Gate() {
           <Route path="/predict" element={<Predict />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/rules" element={<Rules />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/match/:id" element={<MatchDetail />} />
           <Route path="/player/:uid" element={<Player />} />
           <Route path="*" element={<Navigate to="/" replace />} />

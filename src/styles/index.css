@@ -447,3 +447,32 @@ body { font-size: 1.0625rem; }
 .a2hs-steps { list-style: none; display: flex; flex-direction: column; gap: 9px; }
 .a2hs-steps li { display: flex; align-items: flex-start; gap: 9px; font-size: 0.95rem; color: var(--text); line-height: 1.4; }
 .a2hs-steps li svg { width: 19px; height: 19px; flex: 0 0 auto; color: var(--accent); margin-top: 1px; }
+
+/* Expandable match card: reveal all participants' tips inline. */
+.match-card { display: flex; flex-direction: column; }
+.pred-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 8px 2px; margin: 0; background: transparent; border: 0; color: var(--text-3);
+  font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase;
+  transition: color 0.2s var(--ease);
+}
+.pred-toggle:hover { color: var(--accent); }
+.pred-toggle svg { width: 13px; height: 13px; stroke: currentColor; fill: none; transition: transform 0.2s var(--ease); }
+.pred-toggle.open svg { transform: rotate(90deg); }
+.pred-panel { margin-top: 8px; animation: fade 0.3s var(--ease); }
+
+/* Profile entry in the top bar (points chip + avatar, taps to /profile). */
+.you-btn { display: flex; align-items: center; gap: 11px; background: transparent; border: 0; padding: 4px 4px 4px 8px; border-radius: var(--r-pill); transition: background 0.2s var(--ease); }
+.you-btn:hover { background: var(--tint); }
+.you-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
+.you-avatar svg { stroke: currentColor; fill: none; }
+
+/* Goal + red-card timeline for played matches. */
+.events { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline-2); }
+.ev-row { display: grid; grid-template-columns: 38px 12px 1fr auto; align-items: center; gap: 9px; font-size: 0.9375rem; }
+.ev-min { color: var(--text-3); font-size: 0.75rem; text-align: right; }
+.ev-mark { width: 9px; height: 9px; flex: 0 0 auto; }
+.ev-mark.goal { background: var(--accent); border-radius: 50%; }
+.ev-mark.red { background: var(--live); border-radius: 2px; width: 8px; height: 11px; }
+.ev-text { color: var(--text); min-width: 0; }
+.ev-team { color: var(--text-3); font-size: 0.75rem; font-weight: 700; }

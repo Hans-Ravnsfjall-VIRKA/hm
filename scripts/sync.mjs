@@ -60,6 +60,37 @@ function stageFromSlug(slug = '') {
   return 'group';
 }
 
+// Goals + red cards from the scoreboard's per-competition "details" (present
+// for live/finished matches). ESPN's exact shape varies between feeds, so we
+// parse very defensively and simply omit anything we can't read.
+function extractEvents(comp, homeId, awayId) {
+  const details = Array.isArray(comp.details) ? comp.details : [];
+  const out = [];
+  for (const d of details) {
+    const text = (d.type?.text || '').toLowerCase();
+    const isGoal = d.scoringPlay === true || text.includes('goal');
+    const isRed = d.redCard === true || text.includes('red card');
+    if (!isGoal && !isRed) continue;
+    const tid = d.team?.id ?? null;
+    const side = tid != null && String(tid) === String(homeId) ? 'home'
+      : (tid != null && String(tid) === String(awayId) ? 'away' : null);
+    const athlete = d.athletesInvolved?.[0];
+    const player = athlete?.displayName || athlete?.athlete?.displayName || athlete?.shortName || null;
+    const disp = d.clock?.displayValue || null;
+    out.push({
+      t: isRed ? 'red' : 'goal',
+      m: disp,                                   // "23'"
+      min: parseInt(disp || d.clock?.value || '0', 10) || 0,
+      side,
+      player,
+      og: d.ownGoal === true || text.includes('own goal'),
+      pen: d.penaltyKick === true || text.includes('penalty'),
+    });
+  }
+  out.sort((a, b) => a.min - b.min);
+  return out;
+}
+
 // --- Normalize one ESPN event into our match document ----------------------
 function normalizeEvent(ev) {
   const comp = ev.competitions?.[0] || {};
@@ -112,6 +143,7 @@ function normalizeEvent(ev) {
     live,
     finished,
     elapsed: comp.status?.clock ? Math.round(comp.status.clock / 60) : null,
+    events: extractEvents(comp, home?.team?.id, away?.team?.id),
     result,
   };
 }
@@ -155,7 +187,7 @@ async function main() {
     lastSync: Date.now(),
     source: 'espn',
     matchCount: written,
-    version: 2,
+    version: 3,
   }, { merge: true });
 
   console.log(`Synced ${written} matches. Done.`);

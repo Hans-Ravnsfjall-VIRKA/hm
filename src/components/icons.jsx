@@ -35,3 +35,7 @@ export const DotsIcon = (p) => (
 export const PlusSquareIcon = (p) => (
   <svg viewBox="0 0 24 24" {...p}><rect x="4" y="4" width="16" height="16" rx="4" {...s} /><path d="M12 8.5v7M8.5 12h7" {...s} /></svg>
 );
+
+export const PersonIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...p}><circle cx="12" cy="8" r="3.4" {...s} /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" {...s} /></svg>
+);

@@ -1,15 +1,13 @@
-import { useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useTournamentCtx } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
-import { MatchRow } from '../components/Match';
+import MatchCard from '../components/MatchCard';
 import { scorePick } from '../lib/scoring';
 import { foLong, foDayShort, sameDay } from '../lib/foDate';
 
 export default function Today() {
   const { matches, predictionDocs, loaded } = useTournamentCtx();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const myPicks = useMemo(
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
 
@@ -24,10 +22,7 @@ export default function Today() {
   function row(m) {
     const pick = myPicks[m.id];
     const pts = m.finished && pick && m.result ? scorePick(pick, m.result) : null;
-    return (
-      <MatchRow key={m.id} match={m} yourPick={pick} yourPoints={pts}
-        onClick={() => navigate(`/match/${m.id}`)} />
-    );
+    return <MatchCard key={m.id} match={m} yourPick={pick} yourPoints={pts} />;
   }
 
   return (
