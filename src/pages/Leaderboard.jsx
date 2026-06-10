@@ -50,7 +50,7 @@ export default function Leaderboard() {
     <>
       <div className="page-head">
         <h1>Støða</h1>
-        <p>{board.length} {board.length === 1 ? 'spælari' : 'spælarar'} · {finished.length} {finished.length === 1 ? 'dystur liðin' : 'dystir lidnir'}</p>
+        <p>{board.length} {board.length === 1 ? 'spælari' : 'spælarar'} · {finished.length} {finished.length === 1 ? 'dystur spældur' : 'dystir spældir'}</p>
       </div>
 
       {days.length > 0 && (

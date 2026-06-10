@@ -7,7 +7,7 @@ import {
 } from '../lib/tournament';
 import { foDateTime } from '../lib/foDate';
 
-const LOCK_TEXT = 'Lás allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Tá fyrsti dystur í umfarinum byrjar, verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping á einkultum dystum upp til 1 tíma áðrenn kick-off, treytað av at hesir vóru tippaðir áðrenn umfarið bleiv læst';
+const LOCK_TEXT = 'Tippa allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Tá fyrsti dystur í umfarinum byrjar, verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping á einkultum dystum upp til 1 tíma áðrenn kick-off, treytað av at hesir vóru tippaðir áðrenn umfarið bleiv læst';
 
 // Weighted toward realistic low scorelines for the auto-fill.
 const GOAL_BAG = [0, 0, 0, 1, 1, 1, 1, 2, 2, 3];
