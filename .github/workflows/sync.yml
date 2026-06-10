@@ -2,9 +2,9 @@ name: Sync match data
 
 on:
   schedule:
-    # Every 10 minutes. Cron runs in UTC. GitHub may delay scheduled runs
+    # Every 5 minutes. Cron runs in UTC. GitHub may delay scheduled runs
     # under load; that is fine for a prediction league.
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch: # lets you trigger a manual sync from the Actions tab
 
 permissions:
