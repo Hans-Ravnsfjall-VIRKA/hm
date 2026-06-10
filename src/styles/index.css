@@ -481,3 +481,13 @@ body { font-size: 1.0625rem; }
 .day-label { font-size: 0.8125rem; }
 .you-chip .pts { font-size: 1.1875rem; }
 .you-chip .lbl { font-size: 0.75rem; }
+
+/* Confirmation modal (auto-fill, etc.). */
+.modal-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px;
+  background: oklch(0.30 0.05 264 / 0.45); backdrop-filter: blur(4px); animation: fade 0.2s var(--ease); }
+.modal { width: 100%; max-width: 380px; padding: 22px; border-radius: var(--r-xl);
+  background: var(--surface); border: 1px solid var(--hairline-2); box-shadow: var(--shadow); }
+.modal h3 { font-size: 1.125rem; margin-bottom: 10px; }
+.modal p { color: var(--text-2); font-size: 1rem; line-height: 1.5; margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions .btn { flex: 1; }

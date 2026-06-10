@@ -3,21 +3,54 @@ import { useTournamentCtx, useSavePicks } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
 import { Flag, ScoreInput } from '../components/Match';
 import {
-  isConcreteTeam, timeUntil, matchEditable, stageComplete, tippableStages,
+  isConcreteTeam, timeUntil, matchEditable, matchHasTeams, stageComplete, tippableStages,
 } from '../lib/tournament';
 import { foDateTime } from '../lib/foDate';
 
 const LOCK_TEXT = 'Lás allar dystirnar í einum umfari áðrenn fyrsti dysturin verður bríkslaður í gongd. Tá fyrsti dystur í umfarinum byrjar, verður umfarið læst og tað ber ikki til at skráseta nýggjar dystir. Tó ber til at tillaga tipping á einkultum dystum upp til 1 tíma áðrenn kick-off, treytað av at hesir vóru tippaðir áðrenn umfarið bleiv læst';
 
+// Weighted toward realistic low scorelines for the auto-fill.
+const GOAL_BAG = [0, 0, 0, 1, 1, 1, 1, 2, 2, 3];
+const randGoals = () => GOAL_BAG[Math.floor(Math.random() * GOAL_BAG.length)];
+
 export default function Predict() {
   const { stages, predictionDocs, now, loaded } = useTournamentCtx();
   const { user } = useAuth();
   const savePicks = useSavePicks();
+  const [confirm, setConfirm] = useState(false);
+  const [filling, setFilling] = useState(false);
 
   const savedPicks = useMemo(
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
 
   const tippable = useMemo(() => tippableStages(stages, savedPicks), [stages, savedPicks]);
+
+  // Matches you can still edit that you have not tipped yet.
+  const fillable = useMemo(() => {
+    const out = [];
+    for (const s of tippable) {
+      const complete = stageComplete(s, savedPicks);
+      for (const m of s.matches) {
+        if (!matchHasTeams(m)) continue;
+        if (!(matchEditable(m, now) && (s.open || complete))) continue;
+        const p = savedPicks[m.id];
+        if (!(p && Number.isInteger(p.h) && Number.isInteger(p.a))) out.push(m);
+      }
+    }
+    return out;
+  }, [tippable, savedPicks, now]);
+
+  async function autoFill() {
+    setFilling(true);
+    const picks = {};
+    for (const m of fillable) picks[m.id] = { h: randGoals(), a: randGoals() };
+    try {
+      await savePicks(picks);
+    } finally {
+      setFilling(false);
+      setConfirm(false);
+    }
+  }
 
   if (!loaded) return <div className="spinner" />;
 
@@ -29,6 +62,12 @@ export default function Predict() {
 
       <div className="lock-note">{LOCK_TEXT}</div>
 
+      {fillable.length > 0 && (
+        <button className="btn btn-block" style={{ marginBottom: 16 }} onClick={() => setConfirm(true)}>
+          Fyll út automatiskt
+        </button>
+      )}
+
       {tippable.length === 0 && <NothingOpen stages={stages} />}
 
       {tippable.map((stage) => (
@@ -36,6 +75,21 @@ export default function Predict() {
       ))}
 
       {tippable.length > 0 && <UpcomingHint stages={stages} />}
+
+      {confirm && (
+        <div className="modal-overlay" onClick={() => !filling && setConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Fyll út automatiskt</h3>
+            <p>Hetta útfyllir dystarúrslit á ikki áður útfyltum dystum sjálvvirkandi</p>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setConfirm(false)} disabled={filling}>Angra</button>
+              <button className="btn btn-primary" onClick={autoFill} disabled={filling}>
+                {filling ? 'Fylli út…' : 'Útfyll'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
