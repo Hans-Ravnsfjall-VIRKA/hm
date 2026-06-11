@@ -3,6 +3,7 @@ import { useTournamentCtx } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
 import MatchCard from '../components/MatchCard';
 import MomentCard from '../components/MomentCard';
+import CountdownStrip from '../components/CountdownStrip';
 import { scorePick } from '../lib/scoring';
 import { computeMoments } from '../lib/moments';
 import { foLong, foDayShort, sameDay } from '../lib/foDate';
@@ -45,6 +46,7 @@ export default function Today() {
               <p>Næsti dystur:</p>
               <div style={{ marginTop: 14 }}>
                 <div className="day-label" style={{ marginTop: 0 }}>{foDayShort(next.kickoff)}</div>
+                <CountdownStrip kickoff={next.kickoff} />
                 {row(next)}
               </div>
             </>
@@ -55,7 +57,9 @@ export default function Today() {
       {!today.length && !!moments.length && <MomentCard moments={moments} />}
 
       {!!live.length && (<><div className="day-label">Beint nú</div><div className="stack">{live.map(row)}</div></>)}
-      {!!upcoming.length && (<><div className="day-label">Byrjar seinni</div><div className="stack">{upcoming.map(row)}</div></>)}
+      {!!upcoming.length && (<><div className="day-label">Byrjar seinni</div><div className="stack">{upcoming.map((m) => (
+        <div key={m.id}><CountdownStrip kickoff={m.kickoff} />{row(m)}</div>
+      ))}</div></>)}
 
       {!!moments.length && <MomentCard moments={moments} />}
       {!!done.length && (<><div className="day-label">Liðugt</div><div className="stack">{done.map(row)}</div></>)}

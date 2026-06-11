@@ -561,3 +561,16 @@ a, button, .tab, .lb-row, .match, .predict-list-row, .player-row, .you-btn {
 .moment-text { margin-top: 5px; font-family: var(--font-display); font-weight: 700;
   font-size: 1.0625rem; line-height: 1.3; color: var(--text); animation: fade 0.45s var(--ease); }
 @media (prefers-reduced-motion: reduce) { .moment-text { animation: none; } }
+
+/* Countdown strip shown in the final hour before kickoff. The bar sweeps from
+   full to empty (origin left) as time runs down. */
+.countdown { position: relative; height: 30px; margin: 0 0 8px; border-radius: var(--r-pill);
+  background: var(--bg-2); overflow: hidden; display: flex; align-items: center;
+  border: 1px solid var(--hairline-2); }
+.countdown-bar { position: absolute; inset: 0; transform-origin: left center;
+  background: var(--accent-soft); transition: transform 1s linear; }
+.countdown.soon .countdown-bar { background: oklch(0.585 0.22 27 / 0.22); }
+.countdown-label { position: relative; z-index: 1; padding: 0 13px; font-family: var(--font-mono);
+  font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.03em; color: var(--accent); }
+.countdown.soon .countdown-label { color: var(--live); }
+@media (prefers-reduced-motion: reduce) { .countdown-bar { transition: none; } }
