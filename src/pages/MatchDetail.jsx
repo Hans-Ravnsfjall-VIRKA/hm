@@ -3,6 +3,7 @@ import { useTournamentCtx } from '../hooks/useData';
 import { MatchRow } from '../components/Match';
 import MatchPredictions from '../components/MatchPredictions';
 import MatchEvents from '../components/MatchEvents';
+import Disclosure, { hasMatchEvents } from '../components/Disclosure';
 import { BackIcon } from '../components/icons';
 import { STAGE_BY_ID } from '../lib/tournament';
 import { foDateTime } from '../lib/foDate';
@@ -35,12 +36,19 @@ export default function MatchDetail() {
         <p>{match.group ? `${match.group} · ` : ''}{match.kickoff ? foDateTime(match.kickoff) : 'Óvist'}</p>
       </div>
 
-      <div className="panel" style={{ marginBottom: 18 }}>
+      <div style={{ marginBottom: 14 }}>
         <MatchRow match={match} />
-        <MatchEvents match={match} />
       </div>
 
-      <MatchPredictions match={match} />
+      {hasMatchEvents(match) && (
+        <Disclosure title="Hendingar" defaultOpen>
+          <MatchEvents match={match} />
+        </Disclosure>
+      )}
+
+      <Disclosure title="Tippingar" defaultOpen>
+        <MatchPredictions match={match} compact />
+      </Disclosure>
     </>
   );
 }

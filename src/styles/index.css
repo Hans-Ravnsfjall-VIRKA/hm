@@ -51,9 +51,9 @@
   --shadow: 0 1px 2px oklch(0.3 0.05 264 / 0.05), 0 10px 26px oklch(0.3 0.06 264 / 0.07);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --font-display: 'Archivo', system-ui, sans-serif;
-  --font-body: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-mono: 'Space Mono', ui-monospace, monospace;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
 
   --shell-max: 560px;
 }
@@ -103,18 +103,16 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   font-family: var(--font-body);
-  background:
-    radial-gradient(125% 80% at 50% -12%, oklch(0.58 0.16 27 / 0.10), transparent 60%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
-  line-height: 1.45;
+  line-height: 1.47;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100dvh;
 }
 #root { min-height: 100dvh; }
 
-h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.022em; line-height: 1.06; }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
 input { font-family: inherit; }
@@ -128,7 +126,7 @@ input { font-family: inherit; }
 
 .virka-logo { display: block; height: 22px; width: auto; color: var(--accent); }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand .tippi { font-family: var(--font-display); font-weight: 800; font-size: 1.0625rem; letter-spacing: -0.01em; color: var(--text); }
+.brand .tippi { font-family: var(--font-display); font-weight: 700; font-size: 1.0625rem; letter-spacing: -0.02em; color: var(--text); }
 .brand .divider { width: 1px; height: 18px; background: var(--hairline); }
 
 .wc-logo {
@@ -179,8 +177,8 @@ input { font-family: inherit; }
   padding: 8px 2px 6px; border: 0; background: transparent; color: var(--text-3);
   border-radius: var(--r-pill); position: relative; transition: color 0.3s var(--ease);
 }
-.tab svg { width: 20px; height: 20px; }
-.tab span { font-size: 0.5938rem; font-weight: 600; letter-spacing: 0.01em; }
+.tab svg { width: 24px; height: 24px; }
+.tab span { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0; }
 .tab.active { color: var(--accent); }
 .tab.active .tab-pill {
   position: absolute; inset: 0; z-index: -1; border-radius: var(--r-pill);
@@ -241,33 +239,34 @@ input { font-family: inherit; }
 
 .match {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
-  padding: 14px; border-radius: var(--r-lg);
+  padding: 16px; border-radius: var(--r-xl);
   background: var(--surface); border: 1px solid var(--hairline-2); box-shadow: var(--shadow);
   transition: transform 0.25s var(--ease), border-color 0.25s var(--ease);
 }
 .match:active { transform: scale(0.99); }
 .match.clickable:hover { border-color: var(--hairline); }
 
-.side { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.side { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .side.away { flex-direction: row-reverse; text-align: right; }
-.side .name { font-weight: 600; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.side .name.tbd { color: var(--text-3); font-style: italic; font-weight: 500; }
+.side .name { font-weight: 600; font-size: 1.0625rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side .name.tbd { color: var(--text-3); font-style: normal; font-weight: 500; }
 
 .flag {
-  width: 30px; height: 22px; border-radius: 5px; object-fit: cover; flex-shrink: 0;
-  background: var(--surface-2); border: 1px solid var(--hairline-2);
+  width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--hairline-2), 0 1px 2px oklch(0 0 0 / 0.10);
 }
 .flag.mono-chip {
-  display: grid; place-items: center; font-family: var(--font-mono);
-  font-size: 0.6875rem; font-weight: 700; color: var(--text-2);
+  display: grid; place-items: center; font-family: var(--font-display);
+  font-size: 0.75rem; font-weight: 700; color: var(--text-2);
 }
 
-.center { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 62px; }
-.kick { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-3); }
-.score { font-family: var(--font-mono); font-weight: 700; font-size: 1.375rem; letter-spacing: 0.02em; display: flex; align-items: center; gap: 7px; line-height: 1; }
-.score .sep { color: var(--text-3); font-size: 1rem; }
+.center { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 56px; }
+.kick { font-family: var(--font-body); font-size: 0.8125rem; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.score { font-family: var(--font-display); font-weight: 700; font-size: 1.625rem; letter-spacing: 0; display: flex; align-items: center; gap: 8px; line-height: 1; font-variant-numeric: tabular-nums; }
+.score .sep { color: var(--text-3); font-size: 1.125rem; font-weight: 500; }
 .score.live-score { color: var(--live); }
-.elapsed { font-family: var(--font-mono); font-size: 0.625rem; color: var(--live); }
+.elapsed { font-family: var(--font-body); font-size: 0.75rem; font-weight: 600; color: var(--live); font-variant-numeric: tabular-nums; }
 
 .your-pick {
   grid-column: 1 / -1; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline-2);
@@ -460,11 +459,11 @@ input { font-family: inherit; }
    Overrides (latest tweaks): black VIRKA mark, larger body text.
    ========================================================================= */
 
-/* VIRKA wordmark in black. */
-.virka-logo { color: oklch(0.18 0.01 264); height: 20px; }
+/* VIRKA wordmark adapts to the theme so it stays legible in dark mode. */
+.virka-logo { color: var(--text); height: 20px; }
 
 /* Brand lockup carries the longer "Tippikapping" name; keep it tidy. */
-.brand .tippi { font-size: 1rem; }
+.brand .tippi { font-size: 1.0625rem; }
 
 /* Larger body text across the app (the readable prose, not the chrome). */
 body { font-size: 1.0625rem; }
@@ -472,7 +471,7 @@ body { font-size: 1.0625rem; }
 .rule-sec p { font-size: 1.0625rem; line-height: 1.6; }
 .lock-note { font-size: 0.9688rem; line-height: 1.55; }
 .scoretbl td { font-size: 1rem; }
-.side .name { font-size: 1rem; }
+.side .name { font-size: 1.0625rem; }
 .empty { font-size: 1.0625rem; }
 .switch { font-size: 1rem; }
 
@@ -487,8 +486,19 @@ body { font-size: 1.0625rem; }
 .a2hs-steps li { display: flex; align-items: flex-start; gap: 9px; font-size: 0.95rem; color: var(--text); line-height: 1.4; }
 .a2hs-steps li svg { width: 19px; height: 19px; flex: 0 0 auto; color: var(--accent); margin-top: 1px; }
 
-/* Expandable match card: reveal all participants' tips inline. */
-.match-card { display: flex; flex-direction: column; }
+/* Expandable match card: the score row and its dropdowns read as one grouped
+   card, divided by hairlines, rather than separate floating cards. */
+.match-card {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--hairline-2);
+  border-radius: var(--r-xl); box-shadow: var(--shadow); overflow: hidden;
+}
+.match-card .match { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
+.match-card .disclosure {
+  margin-top: 0; background: transparent; border: 0; border-radius: 0;
+  box-shadow: none; border-top: 1px solid var(--hairline-2);
+}
+.match-card .disclosure-head { min-height: 50px; padding: 13px 16px; font-size: 1rem; }
 .pred-toggle {
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 7px 8px 2px; margin: 0; background: transparent; border: 0; color: var(--text-3);
@@ -685,3 +695,35 @@ html, body { overscroll-behavior-y: none; }
   box-shadow: 0 1px 3px oklch(0 0 0 / 0.25); transition: left 0.2s var(--ease);
 }
 .switch.on .switch-knob { left: 23px; }
+
+/* --- Collapsible dropdowns (match events / participants' tips) ---------- */
+.disclosure {
+  margin-top: 10px; background: var(--surface); border-radius: var(--r-xl);
+  border: 1px solid var(--hairline-2); box-shadow: var(--shadow); overflow: hidden;
+}
+.disclosure-head {
+  width: 100%; min-height: 56px; display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px; background: transparent; border: 0; text-align: left;
+  color: var(--text); font-family: var(--font-display);
+  font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em;
+}
+.disclosure-title { flex: 1; }
+.disclosure-meta { color: var(--text-3); font-size: 0.9375rem; font-weight: 500; }
+.disclosure-chevron { stroke: var(--text-3); fill: none; transform: rotate(0deg); transition: transform 0.25s var(--ease); flex: none; }
+.disclosure.open .disclosure-chevron { transform: rotate(90deg); }
+.disclosure-body { padding: 0 16px 16px; animation: fade 0.25s var(--ease); }
+
+/* Inside a dropdown, flatten the nested rows so it reads as one grouped card. */
+.disclosure-body .predict-list-row { box-shadow: none; background: var(--bg-2); border-color: transparent; }
+.disclosure-body .predict-list-row.me { background: linear-gradient(var(--accent-soft), transparent), var(--bg-2); }
+.disclosure-body .events { margin-top: 0; padding-top: 0; border-top: 0; }
+.disclosure-body .empty { padding: 22px 8px; }
+
+/* Bigger, clearer participant rows. */
+.pl-name { font-size: 1.0625rem; }
+.pl-pick { font-size: 1.1875rem; font-variant-numeric: tabular-nums; }
+
+/* Tabular figures on the remaining numeric chrome. */
+.you-chip .pts, .lb-rank, .your-pick .val { font-variant-numeric: tabular-nums; }
+.lb-name { font-size: 1.0625rem; letter-spacing: -0.01em; }
+.lb-rank { font-size: 1.125rem; }
