@@ -7,8 +7,8 @@ on:
     # every 5 min across that window and only every 30 min during the dead
     # hours (07:00-15:00 UTC = ~08:00-16:00 Faroe time) to keep fixtures fresh.
     # GitHub may delay scheduled runs under load; fine for a prediction league.
-    - cron: '*/2 15-23 * * *'   # afternoon + evening matches (UTC)
-    - cron: '*/2 0-6 * * *'     # late matches rolling into the early hours (UTC)
+    - cron: '*/5 15-23 * * *'   # afternoon + evening matches (UTC)
+    - cron: '*/5 0-6 * * *'     # late matches rolling into the early hours (UTC)
     - cron: '*/30 7-14 * * *'   # dead window: light touch for fixture updates
   workflow_dispatch: # lets you trigger a manual sync from the Actions tab
 
