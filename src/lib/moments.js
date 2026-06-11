@@ -1,7 +1,7 @@
 // Computes "honorable mention" moments for the Í dag screen from competition
 // data. Pure + client-side: predictions and results only, no extra storage.
-import { scorePick } from './scoring';
-import { sameDay } from './foDate';
+import { scorePick, buildLeaderboard } from './scoring';
+import { sameDay, foDayKey } from './foDate';
 
 const T = {
   exact: [
@@ -20,6 +20,10 @@ const T = {
   bestDay: [
     'Dagsins besti: {navn} við {stig} stigum í dag.',
     '{navn} fekk flest stig í dag.',
+  ],
+  climber: [
+    '{navn} er lopin {tal} pláss upp.',
+    'Størsta lopið: {navn} fór {tal} pláss upp.',
   ],
   upset: [
     'Eingin trúði upp á tað. Uttan {navn}.',
@@ -150,12 +154,43 @@ export function computeMoments({ matches, predictionDocs, leaderboard }) {
     if (top) out.push({ id: `bestday-${top.d.uid}`, text: fill(pick(T.bestDay, top.d.uid), { navn: name(top.d), stig: top.sum }) });
   }
 
-  // 7) Leader + 8) gentle bottom (need a started competition).
+  // 7) History-based: climber + new leader, using yesterday's standings.
+  //    "Previous" = standings as at the end of the day before the most recent
+  //    finished match day (same method as the Støða day-picker).
   const board = (leaderboard || []).filter((r) => r.played > 0);
+  const dayKeys = [...new Set(finished.map((m) => foDayKey(m.kickoff)).filter(Boolean))].sort();
+  let prevRank = null;
+  let prevLeaderUid = null;
+  if (dayKeys.length >= 2) {
+    const prevKey = dayKeys[dayKeys.length - 2];
+    const prevBoard = buildLeaderboard(docs, finished.filter((m) => foDayKey(m.kickoff) <= prevKey));
+    prevRank = Object.fromEntries(prevBoard.map((r) => [r.uid, r.rank]));
+    const prevLeader = prevBoard.find((r) => r.total > 0);
+    prevLeaderUid = prevLeader ? prevLeader.uid : null;
+  }
+
+  // Biggest climber since the previous day.
+  if (prevRank && board.length) {
+    let top = null;
+    for (const r of board) {
+      const was = prevRank[r.uid];
+      if (was == null) continue;
+      const delta = was - r.rank;
+      if (delta > 0 && (!top || delta > top.delta)) top = { r, delta };
+    }
+    if (top) out.push({ id: `climb-${top.r.uid}`, text: fill(pick(T.climber, top.r.uid), { navn: top.r.displayName, tal: top.delta }) });
+  }
+
+  // Leader: if #1 changed since the previous day, celebrate the takeover;
+  // otherwise show the steady leader line.
   if (board.length && board[0].total > 0) {
     const l = board[0];
-    out.push({ id: `leader-${l.uid}`, text: fill(pick(T.leader, l.uid), { navn: l.displayName, stig: l.total }) });
+    const isNew = prevLeaderUid != null && prevLeaderUid !== l.uid;
+    const tpl = isNew ? T.leader[0] : T.leader[1];
+    out.push({ id: `leader-${l.uid}-${isNew ? 'new' : 'hold'}`, text: fill(tpl, { navn: l.displayName, stig: l.total }) });
   }
+
+  // 8) Gentle bottom (need a started competition).
   if (board.length >= 3 && finished.length > 0) {
     const last = board[board.length - 1];
     out.push({ id: `bottom-${last.uid}`, text: fill(pick(T.bottom, last.uid), { navn: last.displayName }) });
