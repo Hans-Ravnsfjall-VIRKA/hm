@@ -1,0 +1,29 @@
+name: Overlay dry run (no writes)
+
+# Manual only. Runs the live overlay in DRY_RUN mode: it reads your matches and
+# the football-data feed, prints exactly which scores/statuses it WOULD update,
+# and writes nothing. Use this to confirm the join is correct before cutover.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dryrun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Overlay dry run
+        env:
+          DRY_RUN: '1'
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          LIVESCORE_API_KEY: ${{ secrets.LIVESCORE_API_KEY }}
+          LIVESCORE_API_SECRET: ${{ secrets.LIVESCORE_API_SECRET }}
+        run: npm run overlay
