@@ -110,7 +110,7 @@ input { font-family: inherit; }
   backdrop-filter: var(--glass-blur);
 }
 
-.you-chip { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.you-chip { display: flex; flex-direction: row; align-items: baseline; gap: 5px; line-height: 1; }
 .you-chip .pts { font-family: var(--font-mono); font-size: 1.0625rem; font-weight: 700; color: var(--accent); }
 .you-chip .lbl { font-size: 0.625rem; color: var(--text-3); font-family: var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; }
 

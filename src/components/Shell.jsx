@@ -28,8 +28,9 @@ export default function Shell() {
         <BrandLockup />
         <button className="you-btn" onClick={() => navigate('/profile')} aria-label="Vangamynd">
           <div className="you-chip">
+            {me?.rank ? <span className="lbl">#{me.rank} ·</span> : null}
             <span className="pts">{me ? me.total : 0}</span>
-            <span className="lbl">{me?.rank ? `#${me.rank} · stig` : 'stig'}</span>
+            <span className="lbl">stig</span>
           </div>
           <span className="you-avatar"><PersonIcon width={18} height={18} /></span>
         </button>
