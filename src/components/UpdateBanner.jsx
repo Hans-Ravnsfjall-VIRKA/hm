@@ -39,7 +39,7 @@ export default function UpdateBanner() {
   return (
     <div className="update-banner">
       <span>Nýggj útgáva er klár</span>
-      <button onClick={reload}>Endurles</button>
+      <button onClick={reload}>Dagfør appina</button>
     </div>
   );
 }
