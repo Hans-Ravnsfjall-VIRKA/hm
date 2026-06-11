@@ -625,3 +625,6 @@ html, body { overscroll-behavior-y: none; }
   100% { box-shadow: 0 0 0 0 oklch(0.575 0.205 25 / 0); }
 }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+/* Live / awaiting section labels: red with a pulsing dot. */
+.day-label.live-label { color: var(--live); gap: 8px; }

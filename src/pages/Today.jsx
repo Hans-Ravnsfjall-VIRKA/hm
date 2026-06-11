@@ -18,12 +18,15 @@ export default function Today() {
     () => computeMoments({ matches, predictionDocs, leaderboard }), [matches, predictionDocs, leaderboard]);
 
   const today = matches.filter((m) => sameDay(m.kickoff));
-  const live = today.filter((m) => m.live);
-  const upcoming = today.filter((m) => !m.live && !m.finished);
   const HOUR = 3600000;
-  const soonList = upcoming.filter((m) => m.kickoff && m.kickoff - now > 0 && m.kickoff - now <= HOUR);
-  const laterList = upcoming.filter((m) => !(m.kickoff && m.kickoff - now > 0 && m.kickoff - now <= HOUR));
+  const live = today.filter((m) => m.live);
   const done = today.filter((m) => m.finished);
+  // Kickoff has passed but the feed hasn't marked it live or finished yet
+  // (in progress, awaiting data). Should never read "Byrjar seinni".
+  const awaiting = today.filter((m) => !m.live && !m.finished && m.kickoff && m.kickoff <= now);
+  const upcoming = today.filter((m) => !m.live && !m.finished && m.kickoff && m.kickoff > now);
+  const soonList = upcoming.filter((m) => m.kickoff - now <= HOUR);
+  const laterList = upcoming.filter((m) => m.kickoff - now > HOUR);
   const next = !today.length ? matches.find((m) => !m.finished && !m.live && m.kickoff) : null;
 
   if (!loaded) return <div className="spinner" />;
@@ -59,7 +62,8 @@ export default function Today() {
 
       {!today.length && !!moments.length && <MomentCard moments={moments} />}
 
-      {!!live.length && (<><div className="day-label">Beint nú</div><div className="stack">{live.map(row)}</div></>)}
+      {!!live.length && (<><div className="day-label live-label"><span className="live-dot" aria-hidden="true" />Beint nú</div><div className="stack">{live.map(row)}</div></>)}
+      {!!awaiting.length && (<><div className="day-label live-label"><span className="live-dot" aria-hidden="true" />Bíðar</div><div className="stack">{awaiting.map(row)}</div></>)}
       {!!soonList.length && (
         <div className="stack">
           {soonList.map((m) => (
