@@ -604,6 +604,7 @@ html, body { overscroll-behavior-y: none; }
 
 /* Section dividers read as deliberate type, not generic grey labels. */
 .day-label { color: var(--text-2); }
+.next-day { color: var(--text-3); font-size: 0.8125rem; margin: 0 2px 8px; font-weight: 600; }
 
 /* Live-standings note on Støða (shown while matches are in progress). */
 .live-note { display: flex; align-items: center; gap: 8px; margin: -6px 2px 14px;
