@@ -9,7 +9,7 @@ import { computeMoments } from '../lib/moments';
 import { foLong, foDayShort, sameDay } from '../lib/foDate';
 
 export default function Today() {
-  const { matches, predictionDocs, leaderboard, loaded } = useTournamentCtx();
+  const { matches, predictionDocs, leaderboard, now, loaded } = useTournamentCtx();
   const { user } = useAuth();
   const myPicks = useMemo(
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
@@ -20,6 +20,9 @@ export default function Today() {
   const today = matches.filter((m) => sameDay(m.kickoff));
   const live = today.filter((m) => m.live);
   const upcoming = today.filter((m) => !m.live && !m.finished);
+  const HOUR = 3600000;
+  const soonList = upcoming.filter((m) => m.kickoff && m.kickoff - now > 0 && m.kickoff - now <= HOUR);
+  const laterList = upcoming.filter((m) => !(m.kickoff && m.kickoff - now > 0 && m.kickoff - now <= HOUR));
   const done = today.filter((m) => m.finished);
   const next = !today.length ? matches.find((m) => !m.finished && !m.live && m.kickoff) : null;
 
@@ -57,9 +60,14 @@ export default function Today() {
       {!today.length && !!moments.length && <MomentCard moments={moments} />}
 
       {!!live.length && (<><div className="day-label">Beint nú</div><div className="stack">{live.map(row)}</div></>)}
-      {!!upcoming.length && (<><div className="day-label">Byrjar seinni</div><div className="stack">{upcoming.map((m) => (
-        <div key={m.id}><CountdownStrip kickoff={m.kickoff} />{row(m)}</div>
-      ))}</div></>)}
+      {!!soonList.length && (
+        <div className="stack">
+          {soonList.map((m) => (
+            <div key={m.id}><CountdownStrip kickoff={m.kickoff} />{row(m)}</div>
+          ))}
+        </div>
+      )}
+      {!!laterList.length && (<><div className="day-label">Byrjar seinni</div><div className="stack">{laterList.map(row)}</div></>)}
 
       {!!moments.length && <MomentCard moments={moments} />}
       {!!done.length && (<><div className="day-label">Liðugt</div><div className="stack">{done.map(row)}</div></>)}

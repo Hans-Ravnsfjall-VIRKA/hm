@@ -42,13 +42,13 @@
   --glass-edge:   oklch(0.30 0.04 264 / 0.10);
   --glass-blur:   saturate(140%) blur(20px);
 
-  --r-xl: 28px;
-  --r-lg: 20px;
-  --r-md: 14px;
-  --r-sm: 10px;
+  --r-xl: 18px;
+  --r-lg: 13px;
+  --r-md: 10px;
+  --r-sm: 7px;
   --r-pill: 999px;
 
-  --shadow: 0 1px 2px oklch(0.3 0.05 264 / 0.06), 0 18px 44px oklch(0.3 0.06 264 / 0.13);
+  --shadow: 0 1px 2px oklch(0.3 0.05 264 / 0.05), 0 10px 26px oklch(0.3 0.06 264 / 0.07);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
   --font-display: 'Archivo', system-ui, sans-serif;
@@ -574,3 +574,43 @@ a, button, .tab, .lb-row, .match, .predict-list-row, .player-row, .you-btn {
   font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.03em; color: var(--accent); }
 .countdown.soon .countdown-label { color: var(--live); }
 @media (prefers-reduced-motion: reduce) { .countdown-bar { transition: none; } }
+
+/* ============================================================
+   /impeccable pass: de-generic, editorial product surface.
+   Direction: flat paper + hairline definition (not floaty cards),
+   confident masthead, torch-red as an ink accent. Functions, the
+   tab slider, and all motion are unchanged.
+   ============================================================ */
+
+/* Disable the browser's own pull-to-refresh / overscroll glow so our
+   custom gesture is the only one. */
+html, body { overscroll-behavior-y: none; }
+
+/* Flatten content surfaces: define them with hairlines on the paper, not
+   decorative drop-shadows. Keep real elevation only where something truly
+   floats (the fixed tab bar, modals, banners) - those keep var(--shadow). */
+.match, .panel, .lb-row, .standings-table, .pred-panel {
+  box-shadow: none;
+}
+.match { border-color: var(--hairline); }
+
+/* Masthead: heavier, tighter title with a short torch-red rule beneath it as
+   a consistent editorial signature across every screen. */
+.page-head { margin: 16px 2px 22px; }
+.page-head h1 { font-weight: 800; letter-spacing: -0.02em; line-height: 1.02; }
+.page-head h1::after {
+  content: ''; display: block; width: 32px; height: 3px; margin-top: 11px;
+  background: var(--accent); border-radius: 2px;
+}
+
+/* Section dividers read as deliberate type, not generic grey labels. */
+.day-label { color: var(--text-2); }
+
+/* Pull-to-refresh indicator. */
+.ptr { position: fixed; top: 8px; left: 0; right: 0; z-index: 45; display: grid;
+  place-items: center; pointer-events: none; transition: opacity 0.2s var(--ease); }
+.ptr-ring { width: 26px; height: 26px; border-radius: 50%;
+  border: 2.5px solid var(--hairline); border-top-color: var(--accent); }
+.ptr-ring.ready { border-color: var(--accent-soft); border-top-color: var(--accent); }
+.ptr-ring.spin { animation: ptr-spin 0.7s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
