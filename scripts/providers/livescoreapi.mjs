@@ -48,6 +48,18 @@ function mapStatus(status, time) {
   return { status: 'NS', live: false, finished: false };
 }
 
+// live-score-api `time` -> minute number + a short display label.
+// Numbers are minutes ("43"); "HT" is the break; added time can read "45+2".
+function parseClock(time, st) {
+  if (st.finished || time == null) return { elapsed: null, clock: null };
+  const s = String(time).trim().toUpperCase();
+  if (s === 'HT') return { elapsed: null, clock: 'Hálvleikur' };
+  const added = s.match(/^(\d+)\+(\d+)$/);
+  if (added) return { elapsed: parseInt(added[1], 10), clock: `${s}'` };
+  if (/^\d+$/.test(s)) { const n = parseInt(s, 10); return { elapsed: n, clock: `${n}'` }; }
+  return { elapsed: null, clock: null };
+}
+
 // Build a normalized record from a live-score-api match object.
 // `fallbackDay` (YYYY-MM-DD) is used only for live records, which carry a
 // `scheduled` time but no date field.
@@ -55,6 +67,7 @@ function toRecord(m, fallbackDay) {
   const st = mapStatus(m.status, m.time);
   const score = parseScore(m.scores?.score) || parseScore(m.scores?.ft_score);
   const result = (st.live || st.finished) && score ? score : null;
+  const { elapsed, clock } = parseClock(m.time, st);
   const day = m.date || fallbackDay;            // history has m.date; live does not
   const hm = m.scheduled || '00:00';            // HH:MM UTC
   const kickoff = day ? Date.parse(`${day}T${hm}:00Z`) : null;
@@ -65,22 +78,51 @@ function toRecord(m, fallbackDay) {
     live: st.live,
     finished: st.finished,
     result,
+    elapsed,
+    clock,
     home: { name: m.home?.name || null },
     away: { name: m.away?.name || null },
   };
 }
 
-async function getJson(url) {
-  const res = await fetch(url, { headers: { accept: 'application/json' } });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`live-score-api ${res.status} ${res.statusText} ${body.slice(0, 160)}`);
+async function getJson(url, timeoutMs = 8000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { headers: { accept: 'application/json' }, signal: ctrl.signal });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`live-score-api ${res.status} ${res.statusText} ${body.slice(0, 160)}`);
+    }
+    const data = await res.json();
+    if (data && data.success === false) {
+      throw new Error(`live-score-api error: ${data.error || 'unknown'}`);
+    }
+    return data;
+  } finally {
+    clearTimeout(t);
   }
-  const data = await res.json();
-  if (data && data.success === false) {
-    throw new Error(`live-score-api error: ${data.error || 'unknown'}`);
+}
+
+// Pull red cards (straight red + second yellow) from the events list.
+function redCards(eventArr) {
+  const out = [];
+  for (const e of (Array.isArray(eventArr) ? eventArr : [])) {
+    const type = String(e.event || '').toUpperCase();
+    if (type !== 'RED_CARD' && type !== 'YELLOW_RED_CARD') continue;
+    const min = Number.isFinite(+e.time) ? +e.time : 0;
+    out.push({
+      t: 'red',
+      m: e.time != null ? `${e.time}'` : null,
+      min,
+      side: e.is_home ? 'home' : (e.is_away ? 'away' : null),
+      player: e.player?.name || null,
+      og: false,
+      pen: false,
+    });
   }
-  return data;
+  out.sort((a, b) => a.min - b.min);
+  return out;
 }
 
 function dayUTC(offsetDays = 0) {
@@ -105,6 +147,27 @@ export async function fetchUpdates() {
   // 2) Finished backfill (today + yesterday, UTC).
   const histData = await getJson(`${BASE}/matches/history.json?${auth()}&competition_id=${COMP}&from=${dayUTC(-1)}&to=${dayUTC(0)}`);
   for (const m of (histData?.data?.match || [])) add(toRecord(m, null));
+
+  // 3) Red cards: only for the handful of matches in the live feed that are
+  //    live or just finished. Events are a nice-to-have, so any failure here
+  //    is swallowed and never blocks a score update.
+  const liveArr = liveData?.data?.match || [];
+  const targets = liveArr.filter((m) => {
+    const r = recs.get(String(m.id));
+    return r && (r.live || r.finished);
+  });
+  await Promise.all(targets.map(async (m) => {
+    try {
+      const evUrl = m.urls?.events
+        ? `${m.urls.events}&${auth()}`
+        : `${BASE}/matches/events.json?${auth()}&id=${m.id}`;
+      const evData = await getJson(evUrl);
+      const r = recs.get(String(m.id));
+      if (r) r.events = redCards(evData?.data?.event || []);
+    } catch {
+      /* ignore - keep the score update even if events fail */
+    }
+  }));
 
   return [...recs.values()];
 }

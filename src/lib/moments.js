@@ -49,7 +49,18 @@ const T = {
     'Onkur má vera niðast. Í dag er tað {navn}, men í morgin er nýtt høvi.',
     'Tað vendir skjótt í tipping. Í dag er {navn} niðast, men í morgin er aftur ein dagur.',
   ],
+  // Plural variants, used when several players are tied (top / bottom / best day).
+  leaderTie: '{navn} eru á odda við {stig} stigum.',
+  bottomTie: '{navn} eru niðast í dag, men í morgin er nýtt høvi.',
+  bestDayTie: '{navn} fingu flest stig í dag.',
 };
+
+// Join Faroese names: "A", "A og B", "A, B og C".
+function joinNames(names) {
+  if (names.length <= 1) return names[0] || '';
+  if (names.length === 2) return `${names[0]} og ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} og ${names[names.length - 1]}`;
+}
 
 // Deterministic variant pick so the wording is stable across renders.
 function pick(arr, seed) {
@@ -145,13 +156,20 @@ export function computeMoments({ matches, predictionDocs, leaderboard }) {
   // 6) Best of the day: most points from matches finished today (Faroe date).
   const todayDone = finished.filter((m) => sameDay(m.kickoff));
   if (todayDone.length) {
-    let top = null;
-    for (const d of docs) {
+    const sums = docs.map((d) => {
       let sum = 0;
       for (const m of todayDone) { const p = d.picks?.[m.id]; if (p) sum += scorePick(p, m.result); }
-      if (sum > 0 && (!top || sum > top.sum)) top = { d, sum };
+      return { d, sum };
+    }).filter((x) => x.sum > 0);
+    if (sums.length) {
+      const max = Math.max(...sums.map((x) => x.sum));
+      const tops = sums.filter((x) => x.sum === max);
+      if (tops.length === 1) {
+        out.push({ id: `bestday-${tops[0].d.uid}`, text: fill(pick(T.bestDay, tops[0].d.uid), { navn: name(tops[0].d), stig: max }) });
+      } else {
+        out.push({ id: `bestday-tie-${tops.map((x) => x.d.uid).join('-')}`, text: fill(T.bestDayTie, { navn: joinNames(tops.map((x) => name(x.d))), stig: max }) });
+      }
     }
-    if (top) out.push({ id: `bestday-${top.d.uid}`, text: fill(pick(T.bestDay, top.d.uid), { navn: name(top.d), stig: top.sum }) });
   }
 
   // 7) History-based: climber + new leader, using yesterday's standings.
@@ -182,18 +200,32 @@ export function computeMoments({ matches, predictionDocs, leaderboard }) {
   }
 
   // Leader: if #1 changed since the previous day, celebrate the takeover;
-  // otherwise show the steady leader line.
+  // otherwise show the steady leader line. If several share top, name them all.
   if (board.length && board[0].total > 0) {
-    const l = board[0];
-    const isNew = prevLeaderUid != null && prevLeaderUid !== l.uid;
-    const tpl = isNew ? T.leader[0] : T.leader[1];
-    out.push({ id: `leader-${l.uid}-${isNew ? 'new' : 'hold'}`, text: fill(tpl, { navn: l.displayName, stig: l.total }) });
+    const topTotal = board[0].total;
+    const leaders = board.filter((r) => r.total === topTotal);
+    if (leaders.length === 1) {
+      const l = leaders[0];
+      const isNew = prevLeaderUid != null && prevLeaderUid !== l.uid;
+      const tpl = isNew ? T.leader[0] : T.leader[1];
+      out.push({ id: `leader-${l.uid}-${isNew ? 'new' : 'hold'}`, text: fill(tpl, { navn: l.displayName, stig: l.total }) });
+    } else {
+      out.push({ id: `leader-tie-${leaders.map((r) => r.uid).join('-')}`, text: fill(T.leaderTie, { navn: joinNames(leaders.map((r) => r.displayName)), stig: topTotal }) });
+    }
   }
 
-  // 8) Gentle bottom (need a started competition).
+  // 8) Gentle bottom (need a started competition). If several share last place,
+  //    name them all; if the whole board is tied there is no meaningful bottom.
   if (board.length >= 3 && finished.length > 0) {
-    const last = board[board.length - 1];
-    out.push({ id: `bottom-${last.uid}`, text: fill(pick(T.bottom, last.uid), { navn: last.displayName }) });
+    const lastTotal = board[board.length - 1].total;
+    const lowers = board.filter((r) => r.total === lastTotal);
+    if (lowers.length < board.length) {
+      if (lowers.length === 1) {
+        out.push({ id: `bottom-${lowers[0].uid}`, text: fill(pick(T.bottom, lowers[0].uid), { navn: lowers[0].displayName }) });
+      } else {
+        out.push({ id: `bottom-tie-${lowers.map((r) => r.uid).join('-')}`, text: fill(T.bottomTie, { navn: joinNames(lowers.map((r) => r.displayName)) }) });
+      }
+    }
   }
 
   return out.slice(0, 12);

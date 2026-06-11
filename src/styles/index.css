@@ -628,3 +628,12 @@ html, body { overscroll-behavior-y: none; }
 
 /* Live / awaiting section labels: red with a pulsing dot. */
 .day-label.live-label { color: var(--live); gap: 8px; }
+
+/* Red-card marker on a live/finished match row. */
+.redcard {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 9px; height: 13px; border-radius: 2px; flex: none;
+  background: var(--live); color: oklch(1 0 0);
+  font-family: var(--font-mono); font-size: 0.5rem; font-weight: 700; line-height: 1;
+}
+.side.away .redcard { order: -1; }

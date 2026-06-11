@@ -126,24 +126,52 @@ async function main() {
     }
     matched += 1;
 
+    // Is our fixture's home the provider's away? Then orientation is flipped.
+    const flipped = canon(ex.homeTeam?.name) !== canon(r.home.name);
+
     // Align the score to OUR home/away orientation.
     let result = r.result;
-    if (result && canon(ex.homeTeam?.name) !== canon(r.home.name)) {
-      result = { h: r.result.a, a: r.result.h };
-    }
+    if (result && flipped) result = { h: r.result.a, a: r.result.h };
 
     const update = { status: r.status, live: r.live, finished: r.finished };
     if (result) update.result = result; // never write null over an existing score
 
+    // Live minute: write the elapsed minute + label while live; clear the label
+    // at full time so a finished match doesn't keep a stale clock.
+    if (r.live) {
+      update.elapsed = r.elapsed ?? null;
+      update.clock = r.clock ?? null;
+    } else if (r.finished) {
+      update.elapsed = null;
+      update.clock = null;
+    }
+
+    // Red cards: align sides to our orientation, then merge with any existing
+    // non-red events (e.g. goals) so we never wipe those. Only write when there
+    // is at least one red card, so matches with none are left untouched.
+    let reds = Array.isArray(r.events) ? r.events.filter((e) => e.t === 'red') : [];
+    if (flipped) {
+      reds = reds.map((e) => ({ ...e, side: e.side === 'home' ? 'away' : (e.side === 'away' ? 'home' : e.side) }));
+    }
+    let newEvents = null;
+    if (reds.length) {
+      const keptNonRed = (Array.isArray(ex.events) ? ex.events : []).filter((e) => e.t !== 'red');
+      newEvents = [...keptNonRed, ...reds].sort((a, b) => (a.min || 0) - (b.min || 0));
+      update.events = newEvents;
+    }
+
     const sameResult = JSON.stringify(ex.result || null) === JSON.stringify(update.result || ex.result || null);
+    const sameEvents = !newEvents || JSON.stringify(ex.events || null) === JSON.stringify(newEvents);
+    const sameClock = !('clock' in update) || (ex.clock || null) === (update.clock || null);
     const noop = ex.status === update.status && ex.live === update.live
-      && ex.finished === update.finished && sameResult;
+      && ex.finished === update.finished && sameResult && sameEvents && sameClock;
     if (noop) continue;
 
     if (DRY) {
       const from = `${ex.status}${ex.result ? ' ' + ex.result.h + '-' + ex.result.a : ''}`;
       const to = `${update.status}${update.result ? ' ' + update.result.h + '-' + update.result.a : (ex.result ? ' ' + ex.result.h + '-' + ex.result.a : '')}`;
-      console.log(`  UPDATE ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${from} -> ${to}  (id ${ex.id})`);
+      const redNote = reds.length ? `  [${reds.length} red]` : '';
+      console.log(`  UPDATE ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${from} -> ${to}${redNote}  (id ${ex.id})`);
     } else {
       ops.push({ id: ex.id, update });
     }

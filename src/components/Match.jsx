@@ -11,7 +11,7 @@ export function Flag({ team }) {
   return <span className="flag mono-chip">{mono}</span>;
 }
 
-function TeamSide({ team, side }) {
+function TeamSide({ team, side, reds = 0 }) {
   const concrete = isConcreteTeam(team);
   return (
     <div className={`side ${side}`}>
@@ -19,6 +19,11 @@ function TeamSide({ team, side }) {
       <span className={`name ${concrete ? '' : 'tbd'}`}>
         {concrete ? team.name : (team?.name || 'TBD')}
       </span>
+      {reds > 0 && (
+        <span className="redcard" title="Reytt kort" aria-label={`${reds} reytt kort`}>
+          {reds > 1 ? reds : ''}
+        </span>
+      )}
     </div>
   );
 }
@@ -26,7 +31,12 @@ function TeamSide({ team, side }) {
 /** A read-only match row. Shows result if finished, live score if live,
  *  kickoff time otherwise. Optionally shows the viewer's own pick + points. */
 export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
-  const { homeTeam, awayTeam, finished, live, result, elapsed } = match;
+  const { homeTeam, awayTeam, finished, live, result, elapsed, clock } = match;
+
+  const reds = (live || finished) && Array.isArray(match.events)
+    ? match.events.filter((e) => e.t === 'red') : [];
+  const redHome = reds.filter((e) => e.side === 'home').length;
+  const redAway = reds.filter((e) => e.side === 'away').length;
 
   let center;
   if (finished && result) {
@@ -40,7 +50,7 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
     center = (
       <div className="center">
         <div className="score live-score"><span>{result.h}</span><span className="sep">:</span><span>{result.a}</span></div>
-        <div className="elapsed">{elapsed ? `${elapsed}'` : 'LIVE'}</div>
+        <div className="elapsed">{clock || (elapsed ? `${elapsed}'` : 'LIVE')}</div>
       </div>
     );
   } else {
@@ -53,9 +63,9 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
 
   return (
     <div className={`match ${onClick ? 'clickable' : ''}`} onClick={onClick}>
-      <TeamSide team={homeTeam} side="home" />
+      <TeamSide team={homeTeam} side="home" reds={redHome} />
       {center}
-      <TeamSide team={awayTeam} side="away" />
+      <TeamSide team={awayTeam} side="away" reds={redAway} />
       {(yourPick || yourPoints != null) && (
         <div className="your-pick">
           <span className="label">Tipping</span>
