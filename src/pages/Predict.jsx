@@ -19,6 +19,38 @@ export default function Predict() {
   const savePicks = useSavePicks();
   const [confirm, setConfirm] = useState(false);
   const [filling, setFilling] = useState(false);
+  const dialogRef = useRef(null);
+  const confirmBtnRef = useRef(null);
+  const prevFocusRef = useRef(null);
+  const fillingRef = useRef(false);
+  useEffect(() => { fillingRef.current = filling; }, [filling]);
+
+  // Dialog behaviour: move focus in on open, trap Tab within it, close on
+  // Escape, and restore focus to the trigger on close.
+  useEffect(() => {
+    if (!confirm) return undefined;
+    prevFocusRef.current = document.activeElement;
+    confirmBtnRef.current?.focus();
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (!fillingRef.current) setConfirm(false);
+        return;
+      }
+      if (e.key === 'Tab') {
+        const f = dialogRef.current?.querySelectorAll('button:not([disabled])');
+        if (!f || !f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (prevFocusRef.current?.focus) prevFocusRef.current.focus();
+    };
+  }, [confirm]);
 
   const savedPicks = useMemo(
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
@@ -78,12 +110,14 @@ export default function Predict() {
 
       {confirm && (
         <div className="modal-overlay" onClick={() => !filling && setConfirm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Fyll út automatiskt</h3>
-            <p>Hetta útfyllir dystarúrslit á ikki áður útfyltum dystum sjálvvirkandi</p>
+          <div className="modal" role="dialog" aria-modal="true"
+            aria-labelledby="autofill-title" aria-describedby="autofill-desc"
+            ref={dialogRef} onClick={(e) => e.stopPropagation()}>
+            <h3 id="autofill-title">Fyll út automatiskt</h3>
+            <p id="autofill-desc">Hetta útfyllir dystarúrslit á ikki áður útfyltum dystum sjálvvirkandi</p>
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setConfirm(false)} disabled={filling}>Angra</button>
-              <button className="btn btn-primary" onClick={autoFill} disabled={filling}>
+              <button ref={confirmBtnRef} className="btn btn-primary" onClick={autoFill} disabled={filling}>
                 {filling ? 'Fylli út…' : 'Útfyll'}
               </button>
             </div>
@@ -190,9 +224,9 @@ function StagePredictor({ stage, savedPicks, now, savePicks }) {
                 <span className="name">{m.homeTeam?.name || 'TBD'}</span>
               </div>
               <div className="score-box">
-                <ScoreInput value={p.h} onChange={(v) => setVal(m, 'h', v)} disabled={!editable} ariaLabel="heima mál" />
+                <ScoreInput value={p.h} onChange={(v) => setVal(m, 'h', v)} disabled={!editable} ariaLabel={`Mál hjá ${m.homeTeam?.name || 'heimaliðnum'}`} />
                 <span className="x">:</span>
-                <ScoreInput value={p.a} onChange={(v) => setVal(m, 'a', v)} disabled={!editable} ariaLabel="úti mál" />
+                <ScoreInput value={p.a} onChange={(v) => setVal(m, 'a', v)} disabled={!editable} ariaLabel={`Mál hjá ${m.awayTeam?.name || 'útiliðnum'}`} />
               </div>
               <div className="side away">
                 {isConcreteTeam(m.awayTeam) ? <Flag team={m.awayTeam} /> : <span className="flag mono-chip">?</span>}
