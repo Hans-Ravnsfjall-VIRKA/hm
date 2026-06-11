@@ -26,9 +26,12 @@ export default function Leaderboard() {
   const [sel, setSel] = useState('now');
 
   const board = useMemo(() => {
-    const upto = sel === 'now' ? finished : finished.filter((m) => foDayKey(m.kickoff) <= sel);
+    if (sel === 'now') return buildLeaderboard(predictionDocs, matches, { includeLive: true });
+    const upto = finished.filter((m) => foDayKey(m.kickoff) <= sel);
     return buildLeaderboard(predictionDocs, upto);
-  }, [sel, finished, predictionDocs]);
+  }, [sel, finished, matches, predictionDocs]);
+
+  const liveCount = useMemo(() => matches.filter((m) => m.live && m.result).length, [matches]);
 
   // Movement vs the previous day in the history.
   const prevRanks = useMemo(() => {
@@ -52,6 +55,13 @@ export default function Leaderboard() {
         <h1>Støða</h1>
         <p>{board.length} {board.length === 1 ? 'spælari' : 'spælarar'} · {finished.length} {finished.length === 1 ? 'dystur spældur' : 'dystir spældir'}</p>
       </div>
+
+      {sel === 'now' && liveCount > 0 && (
+        <div className="live-note">
+          <span className="live-dot" aria-hidden="true" />
+          Støðan dagførist beint nú · {liveCount} {liveCount === 1 ? 'dystur' : 'dystir'} í gongd
+        </div>
+      )}
 
       {days.length > 0 && (
         <div className="hist">

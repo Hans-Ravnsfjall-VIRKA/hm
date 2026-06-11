@@ -102,7 +102,7 @@ export function useTournament() {
 
   const stages = useMemo(() => buildStages(matches, now), [matches, now]);
   const leaderboard = useMemo(
-    () => buildLeaderboard(predictionDocs, matches), [predictionDocs, matches]);
+    () => buildLeaderboard(predictionDocs, matches, { includeLive: true }), [predictionDocs, matches]);
   const standings = useMemo(() => computeGroupStandings(matches), [matches]);
 
   return {

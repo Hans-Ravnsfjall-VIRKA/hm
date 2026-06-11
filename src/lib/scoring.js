@@ -73,11 +73,12 @@ export function scoreLabel(points, pick, result) {
  * @param {Array}  matches array of match objects (must have id, finished, result)
  * @returns {{total:number, perMatch:Object}}
  */
-export function totalPoints(picks, matches) {
+export function totalPoints(picks, matches, { includeLive = false } = {}) {
   let total = 0;
   const perMatch = {};
   for (const m of matches) {
-    if (!m.finished || !m.result) continue;
+    const usable = m.result && (m.finished || (includeLive && m.live));
+    if (!usable) continue;
     const pick = picks?.[m.id];
     if (!pick) continue;
     const pts = scorePick(pick, m.result);
@@ -91,24 +92,24 @@ export function totalPoints(picks, matches) {
  * Build a ranked leaderboard from all players' prediction docs + matches.
  * Tie-break: more exact results, then more total correct picks, then name.
  */
-export function buildLeaderboard(predictionDocs, matches) {
-  const finished = matches.filter((m) => m.finished && m.result);
+export function buildLeaderboard(predictionDocs, matches, { includeLive = false } = {}) {
+  const scored = matches.filter((m) => m.result && (m.finished || (includeLive && m.live)));
   const rows = predictionDocs.map((doc) => {
-    const { total, perMatch } = totalPoints(doc.picks || {}, finished);
+    const { total, perMatch } = totalPoints(doc.picks || {}, scored, { includeLive });
     let exact = 0;
-    let scored = 0;
-    for (const m of finished) {
+    let played = 0;
+    for (const m of scored) {
       const pts = perMatch[m.id];
       if (pts == null) continue;
       if (pts >= EXACT_BASE) exact += 1;
-      if (pts > 0) scored += 1;
+      if (pts > 0) played += 1;
     }
     return {
       uid: doc.uid,
       displayName: doc.displayName || 'Unknown',
       total,
       exact,
-      scored,
+      scored: played,
       played: Object.keys(doc.picks || {}).length,
       perMatch,
     };

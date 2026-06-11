@@ -614,3 +614,15 @@ html, body { overscroll-behavior-y: none; }
 .ptr-ring.ready { border-color: var(--accent-soft); border-top-color: var(--accent); }
 .ptr-ring.spin { animation: ptr-spin 0.7s linear infinite; }
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
+
+/* Live-standings note on Støða (shown while matches are in progress). */
+.live-note { display: flex; align-items: center; gap: 8px; margin: -6px 2px 14px;
+  font-size: 0.8125rem; font-weight: 600; color: var(--live); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live);
+  box-shadow: 0 0 0 0 var(--live); animation: live-pulse 1.6s var(--ease) infinite; }
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 oklch(0.575 0.205 25 / 0.5); }
+  70% { box-shadow: 0 0 0 7px oklch(0.575 0.205 25 / 0); }
+  100% { box-shadow: 0 0 0 0 oklch(0.575 0.205 25 / 0); }
+}
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
