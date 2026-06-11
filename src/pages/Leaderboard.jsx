@@ -77,7 +77,7 @@ export default function Leaderboard() {
       {board.length === 0 ? (
         <div className="empty"><div className="big">Eingin spælari enn</div><p>Ver tann fyrsti at stovna brúkara og tippa.</p></div>
       ) : (
-        <div className="stack">
+        <div className="lb-list">
           {board.map((r) => {
             const prev = prevRanks ? prevRanks[r.uid] : null;
             const delta = prev != null ? prev - r.rank : 0;

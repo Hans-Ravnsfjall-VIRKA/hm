@@ -5,7 +5,11 @@ import { foTime } from '../lib/foDate';
 export function Flag({ team }) {
   const code = team?.code;
   if (team?.flag) {
-    return <img className="flag" src={team.flag} alt="" loading="lazy" />;
+    return (
+      <span className="flag">
+        <img src={team.flag} alt="" loading="lazy" />
+      </span>
+    );
   }
   const mono = (code || team?.name || '??').slice(0, 3).toUpperCase();
   return <span className="flag mono-chip">{mono}</span>;
