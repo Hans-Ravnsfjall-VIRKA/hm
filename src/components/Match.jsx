@@ -78,20 +78,22 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
 
 /** Numeric score field. value may be null (= not yet tipped): the field shows
  *  a placeholder until typed, so a real 0 is distinguishable from "no pick".
- *  Digits only, max 2, mobile shows a number keypad. */
+ *  Accepts a single goal digit only, 0 to 9. */
 export function ScoreInput({ value, onChange, disabled, ariaLabel }) {
   const shown = Number.isInteger(value) ? String(value) : '';
   const handle = (e) => {
-    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
-    onChange(digits === '' ? null : parseInt(digits, 10));
+    // Keep only digits, take the last one typed, and enforce the 0-9 range.
+    const digits = e.target.value.replace(/\D/g, '');
+    const last = digits.slice(-1);
+    onChange(/^[0-9]$/.test(last) ? parseInt(last, 10) : null);
   };
   return (
     <input
       className={`score-in ${Number.isInteger(value) ? 'filled' : ''}`}
       type="text"
       inputMode="numeric"
-      pattern="[0-9]*"
-      maxLength={2}
+      pattern="[0-9]"
+      maxLength={1}
       value={shown}
       placeholder="–"
       disabled={disabled}
