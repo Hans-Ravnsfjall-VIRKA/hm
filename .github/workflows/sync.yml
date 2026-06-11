@@ -33,7 +33,9 @@ jobs:
 
       - run: npm ci
 
-      - name: Run sync
+      - name: Run live overlay
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: npm run sync
+          LIVESCORE_API_KEY: ${{ secrets.LIVESCORE_API_KEY }}
+          LIVESCORE_API_SECRET: ${{ secrets.LIVESCORE_API_SECRET }}
+        run: npm run overlay
