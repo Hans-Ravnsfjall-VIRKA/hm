@@ -106,7 +106,9 @@ async function main() {
   console.log(`Loaded ${existing.length} existing matches | updates: ${updates.length}${DRY ? ' | DRY RUN' : ''}`);
 
   // 3) Join + build minimal updates (status/score only), skipping no-ops.
+  const STALE_MS = 3.5 * 60 * 60 * 1000; // a match is always over within 3.5h of kickoff
   const ops = [];
+  const covered = new Set(); // fixture ids the feed returned this run
   let matched = 0; let unmatched = 0;
   for (const r of updates) {
     const candidates = byPair.get(teamPairKey(r.home.name, r.away.name)) || [];
@@ -146,19 +148,33 @@ async function main() {
       update.clock = null;
     }
 
-    // Red cards: align sides to our orientation, then merge with any existing
-    // non-red events (e.g. goals) so we never wipe those. Only write when there
-    // is at least one red card, so matches with none are left untouched.
-    let reds = Array.isArray(r.events) ? r.events.filter((e) => e.t === 'red') : [];
-    if (flipped) {
-      reds = reds.map((e) => ({ ...e, side: e.side === 'home' ? 'away' : (e.side === 'away' ? 'home' : e.side) }));
+    // Safety: a real match is over well within 3.5h of kickoff. If the feed
+    // still reports it as live that long after kickoff (stale / insufficient
+    // data), close it so it can't get stuck on LIVE in the app.
+    if (update.live && ex.kickoff && Date.now() - ex.kickoff > STALE_MS) {
+      update.status = 'FT';
+      update.live = false;
+      update.finished = true;
+      update.elapsed = null;
+      update.clock = null;
     }
+    covered.add(ex.id);
+
+    // Events (goals, red cards, missed penalties): the live-score-api events
+    // endpoint is authoritative for matches it covers, so when the provider
+    // supplies an events array we write the whole list (aligned to our home/away
+    // orientation). When it supplies nothing (events fetch failed / not covered)
+    // we leave whatever is already on the doc untouched.
     let newEvents = null;
-    if (reds.length) {
-      const keptNonRed = (Array.isArray(ex.events) ? ex.events : []).filter((e) => e.t !== 'red');
-      newEvents = [...keptNonRed, ...reds].sort((a, b) => (a.min || 0) - (b.min || 0));
+    if (Array.isArray(r.events)) {
+      newEvents = r.events.map((e) => (
+        flipped
+          ? { ...e, side: e.side === 'home' ? 'away' : (e.side === 'away' ? 'home' : e.side) }
+          : e
+      )).sort((a, b) => (a.min || 0) - (b.min || 0));
       update.events = newEvents;
     }
+    const redCount = newEvents ? newEvents.filter((e) => e.t === 'red').length : 0;
 
     const sameResult = JSON.stringify(ex.result || null) === JSON.stringify(update.result || ex.result || null);
     const sameEvents = !newEvents || JSON.stringify(ex.events || null) === JSON.stringify(newEvents);
@@ -170,11 +186,22 @@ async function main() {
     if (DRY) {
       const from = `${ex.status}${ex.result ? ' ' + ex.result.h + '-' + ex.result.a : ''}`;
       const to = `${update.status}${update.result ? ' ' + update.result.h + '-' + update.result.a : (ex.result ? ' ' + ex.result.h + '-' + ex.result.a : '')}`;
-      const redNote = reds.length ? `  [${reds.length} red]` : '';
-      console.log(`  UPDATE ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${from} -> ${to}${redNote}  (id ${ex.id})`);
+      const redNote = redCount ? `  [${redCount} red]` : '';
+      const clockNote = update.clock ? `  ${update.clock}` : '';
+      console.log(`  UPDATE ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${from} -> ${to}${clockNote}${redNote}  (id ${ex.id})`);
     } else {
       ops.push({ id: ex.id, update });
     }
+  }
+
+  // Safety net: close any match still flagged live long after kickoff that the
+  // feed no longer returns at all (dropped out before a sync caught full time).
+  for (const m of existing) {
+    if (!m.live || covered.has(m.id)) continue;
+    if (!m.kickoff || Date.now() - m.kickoff <= STALE_MS) continue;
+    const close = { status: 'FT', live: false, finished: true, clock: null, elapsed: null };
+    if (DRY) console.log(`  CLOSE ${m.homeTeam?.name} v ${m.awayTeam?.name}: LIVE -> FT (stale, not in feed, id ${m.id})`);
+    else ops.push({ id: m.id, update: close });
   }
 
   console.log(`${PROVIDER_NAME}: matched=${matched} unmatched=${unmatched} changes=${DRY ? '(dry)' : ops.length}`);

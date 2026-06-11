@@ -104,21 +104,29 @@ async function getJson(url, timeoutMs = 8000) {
   }
 }
 
-// Pull red cards (straight red + second yellow) from the events list.
-function redCards(eventArr) {
+// Pull the events we display from the events list: goals (incl. penalty +
+// own goal), red cards (straight red + second yellow), and missed penalties.
+// Yellow cards and substitutions are ignored.
+function extractEvents(eventArr) {
   const out = [];
   for (const e of (Array.isArray(eventArr) ? eventArr : [])) {
     const type = String(e.event || '').toUpperCase();
-    if (type !== 'RED_CARD' && type !== 'YELLOW_RED_CARD') continue;
+    let t = null; let og = false; let pen = false;
+    if (type === 'GOAL') { t = 'goal'; }
+    else if (type === 'GOAL_PENALTY') { t = 'goal'; pen = true; }
+    else if (type === 'OWN_GOAL') { t = 'goal'; og = true; }
+    else if (type === 'RED_CARD' || type === 'YELLOW_RED_CARD') { t = 'red'; }
+    else if (type === 'MISSED_PENALTY') { t = 'miss'; pen = true; }
+    else continue;
     const min = Number.isFinite(+e.time) ? +e.time : 0;
     out.push({
-      t: 'red',
+      t,
       m: e.time != null ? `${e.time}'` : null,
       min,
       side: e.is_home ? 'home' : (e.is_away ? 'away' : null),
       player: e.player?.name || null,
-      og: false,
-      pen: false,
+      og,
+      pen,
     });
   }
   out.sort((a, b) => a.min - b.min);
@@ -158,12 +166,10 @@ export async function fetchUpdates() {
   });
   await Promise.all(targets.map(async (m) => {
     try {
-      const evUrl = m.urls?.events
-        ? `${m.urls.events}&${auth()}`
-        : `${BASE}/matches/events.json?${auth()}&id=${m.id}`;
+      const evUrl = `${BASE}/matches/events.json?${auth()}&id=${m.id}`;
       const evData = await getJson(evUrl);
       const r = recs.get(String(m.id));
-      if (r) r.events = redCards(evData?.data?.event || []);
+      if (r) r.events = extractEvents(evData?.data?.event || []);
     } catch {
       /* ignore - keep the score update even if events fail */
     }

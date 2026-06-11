@@ -468,11 +468,12 @@ body { font-size: 1.0625rem; }
 
 /* Goal + red-card timeline for played matches. */
 .events { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline-2); }
-.ev-row { display: grid; grid-template-columns: 38px 12px 1fr auto; align-items: center; gap: 9px; font-size: 0.9375rem; }
+.ev-row { display: grid; grid-template-columns: 38px 20px 1fr auto; align-items: center; gap: 9px; font-size: 0.9375rem; }
 .ev-min { color: var(--text-3); font-size: 0.75rem; text-align: right; }
-.ev-mark { width: 9px; height: 9px; flex: 0 0 auto; }
-.ev-mark.goal { background: var(--accent); border-radius: 50%; }
-.ev-mark.red { background: var(--live); border-radius: 2px; width: 8px; height: 11px; }
+.ev-icon { display: flex; align-items: center; justify-content: center; }
+.ev-ico { display: block; }
+.ico-goal { color: var(--text); }
+.ico-miss { color: var(--text-3); }
 .ev-text { color: var(--text); min-width: 0; }
 .ev-team { color: var(--text-3); font-size: 0.75rem; font-weight: 700; }
 
@@ -581,8 +582,7 @@ a, button, .tab, .lb-row, .match, .predict-list-row, .player-row, .you-btn {
    tab slider, and all motion are unchanged.
    ============================================================ */
 
-/* Disable the browser's own pull-to-refresh / overscroll glow so our
-   custom gesture is the only one. */
+/* Disable the browser's own pull-to-refresh / overscroll glow. */
 html, body { overscroll-behavior-y: none; }
 
 /* Flatten content surfaces: define them with hairlines on the paper, not
@@ -604,15 +604,6 @@ html, body { overscroll-behavior-y: none; }
 
 /* Section dividers read as deliberate type, not generic grey labels. */
 .day-label { color: var(--text-2); }
-
-/* Pull-to-refresh indicator. */
-.ptr { position: fixed; top: 8px; left: 0; right: 0; z-index: 45; display: grid;
-  place-items: center; pointer-events: none; transition: opacity 0.2s var(--ease); }
-.ptr-ring { width: 26px; height: 26px; border-radius: 50%;
-  border: 2.5px solid var(--hairline); border-top-color: var(--accent); }
-.ptr-ring.ready { border-color: var(--accent-soft); border-top-color: var(--accent); }
-.ptr-ring.spin { animation: ptr-spin 0.7s linear infinite; }
-@keyframes ptr-spin { to { transform: rotate(360deg); } }
 
 /* Live-standings note on Støða (shown while matches are in progress). */
 .live-note { display: flex; align-items: center; gap: 8px; margin: -6px 2px 14px;
@@ -636,4 +627,3 @@ html, body { overscroll-behavior-y: none; }
   background: var(--live); color: oklch(1 0 0);
   font-family: var(--font-mono); font-size: 0.5rem; font-weight: 700; line-height: 1;
 }
-.side.away .redcard { order: -1; }

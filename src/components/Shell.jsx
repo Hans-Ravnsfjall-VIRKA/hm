@@ -1,5 +1,4 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import PullToRefresh from './PullToRefresh';
 import { BrandLockup } from './Brand';
 import { TodayIcon, FixturesIcon, PredictIcon, BoardIcon, RulesIcon, PersonIcon } from './icons';
 import { useAuth } from '../auth/AuthContext';
@@ -37,7 +36,6 @@ export default function Shell() {
         </button>
       </header>
 
-      <PullToRefresh />
 
       <main className="page fade-in">
         <InstallPrompt />
