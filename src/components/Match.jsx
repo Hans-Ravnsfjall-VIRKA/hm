@@ -68,7 +68,7 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
       <TeamSide team={awayTeam} side="away" reds={redAway} />
       {(yourPick || yourPoints != null) && (
         <div className="your-pick">
-          <span className="label">Tipping</span>
+          <span className="label">Tín tipping</span>
           <span>
             {yourPick
               ? <span className="val mono">{yourPick.h}:{yourPick.a}</span>
