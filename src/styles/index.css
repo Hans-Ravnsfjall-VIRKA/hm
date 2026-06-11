@@ -552,3 +552,12 @@ a, button, .tab, .lb-row, .match, .predict-list-row, .player-row, .you-btn {
 .score-in:focus-visible, .field input:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent);
 }
+
+/* Honorable-mention "moment" card on Í dag (rotates between matches). */
+.moment-card { margin: 18px 0; padding: 15px 17px; border-radius: var(--r-lg);
+  background: var(--accent-soft); border: 1px solid oklch(0.585 0.22 27 / 0.18); }
+.moment-label { font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent); }
+.moment-text { margin-top: 5px; font-family: var(--font-display); font-weight: 700;
+  font-size: 1.0625rem; line-height: 1.3; color: var(--text); animation: fade 0.45s var(--ease); }
+@media (prefers-reduced-motion: reduce) { .moment-text { animation: none; } }

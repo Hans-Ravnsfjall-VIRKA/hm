@@ -2,14 +2,19 @@ import { useMemo } from 'react';
 import { useTournamentCtx } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
 import MatchCard from '../components/MatchCard';
+import MomentCard from '../components/MomentCard';
 import { scorePick } from '../lib/scoring';
+import { computeMoments } from '../lib/moments';
 import { foLong, foDayShort, sameDay } from '../lib/foDate';
 
 export default function Today() {
-  const { matches, predictionDocs, loaded } = useTournamentCtx();
+  const { matches, predictionDocs, leaderboard, loaded } = useTournamentCtx();
   const { user } = useAuth();
   const myPicks = useMemo(
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
+
+  const moments = useMemo(
+    () => computeMoments({ matches, predictionDocs, leaderboard }), [matches, predictionDocs, leaderboard]);
 
   const today = matches.filter((m) => sameDay(m.kickoff));
   const live = today.filter((m) => m.live);
@@ -47,8 +52,12 @@ export default function Today() {
         </div>
       )}
 
+      {!today.length && !!moments.length && <MomentCard moments={moments} />}
+
       {!!live.length && (<><div className="day-label">Beint nú</div><div className="stack">{live.map(row)}</div></>)}
       {!!upcoming.length && (<><div className="day-label">Byrjar seinni</div><div className="stack">{upcoming.map(row)}</div></>)}
+
+      {!!moments.length && <MomentCard moments={moments} />}
       {!!done.length && (<><div className="day-label">Liðugt</div><div className="stack">{done.map(row)}</div></>)}
 
       {!!today.length && (
