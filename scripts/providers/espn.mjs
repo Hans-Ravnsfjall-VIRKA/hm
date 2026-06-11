@@ -128,6 +128,91 @@ async function fetchRange(range) {
   return data.events || [];
 }
 
+// --- Live refresh via the per-match summary endpoint -----------------------
+// The cached scoreboard can lag a live match by minutes. ESPN's per-event
+// "summary" endpoint (what espn.com uses for live match pages) updates faster.
+// We only call it for the FEW matches that are live or just kicked off, so it
+// stays cheap: a handful of parallel requests, each with a short timeout, and
+// any failure just falls back to the scoreboard data for that match.
+
+function summaryUrl(id) {
+  return `https://site.web.api.espn.com/apis/site/v2/sports/soccer/${LEAGUE}/summary?event=${id}&region=us&lang=en&contentorigin=espn`;
+}
+
+async function fetchJson(url, timeoutMs = 8000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { headers: { accept: 'application/json' }, signal: ctrl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function keyEventsFromSummary(data, homeId, awayId) {
+  const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
+  const out = [];
+  for (const d of ke) {
+    const text = (d.type?.text || '').toLowerCase();
+    const isGoal = d.scoringPlay === true || text.includes('goal');
+    const isRed = d.redCard === true || text.includes('red card');
+    if (!isGoal && !isRed) continue;
+    const tid = d.team?.id ?? null;
+    const side = tid != null && String(tid) === String(homeId) ? 'home'
+      : (tid != null && String(tid) === String(awayId) ? 'away' : null);
+    const ath = d.participants?.[0]?.athlete || d.athletesInvolved?.[0];
+    const player = ath?.displayName || ath?.shortName || null;
+    const disp = d.clock?.displayValue || null;
+    out.push({
+      t: isRed ? 'red' : 'goal',
+      m: disp,
+      min: parseInt(disp || '0', 10) || 0,
+      side,
+      player,
+      og: d.ownGoal === true || text.includes('own goal'),
+      pen: d.penaltyKick === true || text.includes('penalty'),
+    });
+  }
+  out.sort((a, b) => a.min - b.min);
+  return out;
+}
+
+// Merge fresher summary data onto the scoreboard-derived match. Only advances
+// state (never regresses a finished match back to live), so it is safe.
+function applySummary(base, data) {
+  const comp = data?.header?.competitions?.[0];
+  if (!comp) return base;
+  const stype = comp.status?.type || {};
+  const state = stype.state;                 // 'pre' | 'in' | 'post'
+  const live = state === 'in';
+  const finished = state === 'post' && !!stype.completed;
+  if (!live && !finished && state !== 'pre') return base;
+
+  const competitors = comp.competitors || [];
+  const home = competitors.find((c) => c.homeAway === 'home') || competitors[0];
+  const away = competitors.find((c) => c.homeAway === 'away') || competitors[1];
+  const num = (c) => { const n = parseInt(c?.score, 10); return Number.isFinite(n) ? n : null; };
+  const result = (live || finished) && num(home) != null && num(away) != null
+    ? { h: num(home), a: num(away) } : base.result;
+
+  let status = base.status;
+  if (finished) status = 'FT'; else if (live) status = 'LIVE'; else status = base.status;
+  const elapsed = parseInt(comp.status?.displayClock || '', 10) || base.elapsed;
+  const events = keyEventsFromSummary(data, home?.team?.id, away?.team?.id);
+
+  return {
+    ...base,
+    status,
+    live: live || (base.live && !finished),
+    finished: finished || base.finished,
+    result,
+    elapsed,
+    events: events.length ? events : base.events,
+  };
+}
+
 // The provider contract: return an array of normalized match docs.
 export async function fetchMatches() {
   const byId = new Map();
@@ -136,5 +221,29 @@ export async function fetchMatches() {
     const events = await fetchRange(range);
     for (const ev of events) byId.set(String(ev.id), ev);
   }
-  return [...byId.values()].map(normalizeEvent);
+  const matches = [...byId.values()].map(normalizeEvent);
+
+  // Refresh only the matches that are live or recently kicked off (a lagging
+  // scoreboard can still say "pre" while the match is underway). Usually 0-4.
+  const now = Date.now();
+  const LIVE_WINDOW = 3.5 * 60 * 60 * 1000; // ~match length + buffer
+  const targets = matches.filter((m) => !m.finished && m.kickoff
+    && (m.live || (m.kickoff <= now && now - m.kickoff <= LIVE_WINDOW)));
+
+  if (targets.length) {
+    console.log(`[espn] live refresh via summary for ${targets.length} match(es)`);
+    const map = new Map(matches.map((m) => [m.id, m]));
+    const updated = await Promise.all(targets.map(async (m) => {
+      try {
+        return applySummary(m, await fetchJson(summaryUrl(m.id)));
+      } catch (e) {
+        console.warn(`[espn] summary ${m.id} failed (${e.message}) - using scoreboard`);
+        return m;
+      }
+    }));
+    for (const u of updated) map.set(u.id, u);
+    return [...map.values()];
+  }
+
+  return matches;
 }
