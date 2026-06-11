@@ -14,6 +14,16 @@
     <meta name="apple-mobile-web-app-title" content="Tippikapping" />
     <meta name="application-name" content="Tippikapping" />
     <script>
+      // Apply the saved theme before first paint so dark users see no flash.
+      try {
+        if (localStorage.getItem('vt-theme') === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', '#14151c');
+        }
+      } catch (e) {}
+    </script>
+    <script>
       // Capture the install prompt early so the UI can offer it after mount.
       window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__bip = e; });
     </script>

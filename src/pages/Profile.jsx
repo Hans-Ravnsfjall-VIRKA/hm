@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { BackIcon } from '../components/icons';
+import { getTheme, setTheme } from '../lib/theme';
 
 export default function Profile() {
   const { user, updateName, resetPassword, logout } = useAuth();
@@ -10,6 +11,13 @@ export default function Profile() {
   const [status, setStatus] = useState('idle');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [theme, setThemeState] = useState(getTheme());
+
+  function toggleTheme() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    setThemeState(nextTheme);
+  }
 
   async function save() {
     const clean = name.trim();
@@ -61,6 +69,25 @@ export default function Profile() {
         <div className="field" style={{ marginBottom: 0 }}>
           <label>Teldupostur</label>
           <input value={user?.email || ''} readOnly disabled />
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 14 }}>
+        <div className="setting-row">
+          <div>
+            <div className="setting-title">Myrkur háttur</div>
+            <div className="setting-sub">Brúka myrkan ham í appini.</div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={theme === 'dark'}
+            aria-label="Myrkur háttur"
+            className={`switch ${theme === 'dark' ? 'on' : ''}`}
+            onClick={toggleTheme}
+          >
+            <span className="switch-knob" aria-hidden="true" />
+          </button>
         </div>
       </div>
 
