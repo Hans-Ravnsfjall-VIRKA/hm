@@ -50,10 +50,25 @@ const ACCENT_IDS = ACCENTS.map((a) => a.id);
 export function getAccent() {
   try {
     const v = localStorage.getItem(ACCENT_KEY);
-    return ACCENT_IDS.includes(v) ? v : 'coral';
+    return ACCENT_IDS.includes(v) ? v : 'lime';
   } catch {
-    return 'coral';
+    return 'lime';
   }
+}
+
+// The explicitly stored accent id, or null if the user has never chosen one
+// (so callers can tell "chose lime" apart from "defaulted to lime").
+export function getStoredAccent() {
+  try {
+    const v = localStorage.getItem(ACCENT_KEY);
+    return ACCENT_IDS.includes(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isAccent(id) {
+  return ACCENT_IDS.includes(id);
 }
 
 export function applyAccent(accent) {

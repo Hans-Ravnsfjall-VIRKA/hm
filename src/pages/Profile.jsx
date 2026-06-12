@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { BackIcon } from '../components/icons';
-import { getTheme, setTheme, ACCENTS, getAccent, setAccent, getFontScale, setFontScale } from '../lib/theme';
+import { getTheme, setTheme, ACCENTS, getAccent, getFontScale, setFontScale } from '../lib/theme';
 
 /* global __APP_VERSION__, __APP_VERSION_NAME__ */
 const VERSION = typeof __APP_VERSION_NAME__ !== 'undefined' ? String(__APP_VERSION_NAME__) : '1.0.0';
@@ -19,7 +19,7 @@ function buildLabel(stamp) {
 }
 
 export default function Profile() {
-  const { user, updateName, resetPassword, logout } = useAuth();
+  const { user, updateName, resetPassword, logout, saveAccent } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState(user?.displayName || '');
   const [status, setStatus] = useState('idle');
@@ -36,9 +36,13 @@ export default function Profile() {
   }
 
   function pickAccent(id) {
-    setAccent(id);
+    saveAccent(id);
     setAccentState(id);
   }
+
+  // After the account's saved accent has been applied on sign-in, reflect it
+  // in the picker highlight.
+  useEffect(() => { setAccentState(getAccent()); }, [user]);
 
   function pickFontScale(s) {
     setFontScale(s);
@@ -137,12 +141,12 @@ export default function Profile() {
 
         <div className="setting-stack">
           <div className="setting-title">Skriftstødd</div>
-          <div className="seg" role="group" aria-label="Skriftstødd">
+          <div className="size-seg" role="group" aria-label="Skriftstødd">
             {['0', '1', '2'].map((s, i) => (
               <button
                 key={s}
                 type="button"
-                className={`seg-btn ${fontScale === s ? 'sel' : ''}`}
+                className={`size-btn ${fontScale === s ? 'sel' : ''}`}
                 onClick={() => pickFontScale(s)}
                 aria-pressed={fontScale === s}
               >

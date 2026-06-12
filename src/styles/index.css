@@ -74,7 +74,7 @@
   --text-2:    oklch(0.78 0.020 264);
   --text-3:    oklch(0.64 0.025 264);
 
-  --accent:        #FF6B4A;
+  --accent:        #C6F432;
   --accent-strong: color-mix(in oklab, var(--accent), black 16%);
   --accent-soft:   color-mix(in oklab, var(--accent) 18%, transparent);
   --accent-fill:   var(--accent);
@@ -124,8 +124,9 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100dvh;
+  overflow-x: clip;
 }
-#root { min-height: 100dvh; }
+#root { min-height: 100dvh; max-width: 100%; overflow-x: clip; }
 
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.022em; line-height: 1.06; }
 a { color: inherit; text-decoration: none; }
@@ -747,13 +748,13 @@ html, body { overscroll-behavior-y: none; }
 @media (max-width: 360px) { .accent-grid { grid-template-columns: repeat(5, 1fr); } }
 
 /* segmented control (font size) */
-.seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: var(--r-lg); }
-.seg-btn {
+.size-seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: var(--r-lg); }
+.size-btn {
   min-width: 52px; height: 40px; display: flex; align-items: center; justify-content: center;
   border: 0; border-radius: calc(var(--r-lg) - 4px); background: transparent; color: var(--text-2);
   cursor: pointer; transition: background 0.15s var(--ease), color 0.15s var(--ease);
 }
-.seg-btn.sel { background: var(--accent); color: var(--accent-text); }
+.size-btn.sel { background: var(--accent); color: var(--accent-text); }
 
 /* --- Collapsible dropdowns (match events / participants' tips) ---------- */
 .disclosure {

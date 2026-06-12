@@ -7,8 +7,9 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { setAccent as applyAccountAccent, getStoredAccent, isAccent } from '../lib/theme';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -17,10 +18,34 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => onAuthStateChanged(auth, (u) => {
+  useEffect(() => onAuthStateChanged(auth, async (u) => {
     setUser(u);
     setReady(true);
+    // Bring the saved accent across devices: the account wins; if the account
+    // has none yet but this device has a chosen accent, push it up once.
+    if (u) {
+      try {
+        const snap = await getDoc(doc(db, 'users', u.uid));
+        const remote = snap.exists() ? snap.data().accent : null;
+        if (isAccent(remote)) {
+          applyAccountAccent(remote);
+        } else {
+          const local = getStoredAccent();
+          if (local) await setDoc(doc(db, 'users', u.uid), { accent: local }, { merge: true });
+        }
+      } catch { /* ignore - falls back to the local/default accent */ }
+    }
   }), []);
+
+  // Persist the accent on the account so it follows the user across devices,
+  // and apply it locally right away.
+  async function saveAccent(accent) {
+    applyAccountAccent(accent);
+    const u = auth.currentUser;
+    if (u) {
+      try { await setDoc(doc(db, 'users', u.uid), { accent }, { merge: true }); } catch { /* ignore */ }
+    }
+  }
 
   async function register({ name, email, password }) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -61,7 +86,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthCtx.Provider value={{ user, ready, register, login, logout, resetPassword, updateName }}>
+    <AuthCtx.Provider value={{ user, ready, register, login, logout, resetPassword, updateName, saveAccent }}>
       {children}
     </AuthCtx.Provider>
   );

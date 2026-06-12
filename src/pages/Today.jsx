@@ -78,7 +78,7 @@ export default function Today() {
           ))}
         </div>
       )}
-      {!!laterList.length && (<><div className="day-label">Byrjar seinni</div><div className="stack">{laterList.map(row)}</div></>)}
+      {!!laterList.length && (<><div className="day-label">Seinni</div><div className="stack">{laterList.map(row)}</div></>)}
 
       {!!done.length && (<><div className="day-label">Liðugt</div><div className="stack">{done.map(row)}</div></>)}
 
