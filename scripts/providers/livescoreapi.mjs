@@ -116,6 +116,7 @@ function extractEvents(eventArr) {
     else if (type === 'GOAL_PENALTY') { t = 'goal'; pen = true; }
     else if (type === 'OWN_GOAL') { t = 'goal'; og = true; }
     else if (type === 'RED_CARD' || type === 'YELLOW_RED_CARD') { t = 'red'; }
+    else if (type === 'YELLOW_CARD') { t = 'yellow'; }
     else if (type === 'MISSED_PENALTY') { t = 'miss'; pen = true; }
     else continue;
     const min = Number.isFinite(+e.time) ? +e.time : 0;

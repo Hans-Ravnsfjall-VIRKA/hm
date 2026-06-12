@@ -50,7 +50,8 @@ function espnKeyEvents(data, homeId, awayId) {
     const text = (d.type?.text || '').toLowerCase();
     const isGoal = d.scoringPlay === true || text.includes('goal');
     const isRed = d.redCard === true || text.includes('red card');
-    if (!isGoal && !isRed) continue;
+    const isYellow = !isRed && (d.yellowCard === true || text.includes('yellow'));
+    if (!isGoal && !isRed && !isYellow) continue;
     const tid = d.team?.id ?? null;
     const side = tid != null && String(tid) === String(homeId) ? 'home'
       : (tid != null && String(tid) === String(awayId) ? 'away' : null);
@@ -58,7 +59,7 @@ function espnKeyEvents(data, homeId, awayId) {
     const player = ath?.displayName || ath?.shortName || null;
     const disp = d.clock?.displayValue || null;
     out.push({
-      t: isRed ? 'red' : 'goal',
+      t: isRed ? 'red' : isYellow ? 'yellow' : 'goal',
       m: disp,
       min: parseInt(disp || '0', 10) || 0,
       side,
@@ -242,12 +243,13 @@ async function syncOnce(cache = null) {
       update.events = newEvents;
     }
 
-    // Fallback: when live-score-api carries no events for a finished match and
-    // the doc has none yet, fill goals + red cards from ESPN's summary (our id
-    // is the ESPN event id). One request per finished match, then it no-ops.
+    // Fallback: when live-score-api carries no events for a finished match,
+    // fill goals + cards from ESPN's summary (our id is the ESPN event id). We
+    // keep trying until the doc has a yellow card, so matches filled before
+    // yellows were supported get backfilled; then it settles into a no-op.
     const lsHasEvents = Array.isArray(newEvents) && newEvents.length > 0;
-    const docHasEvents = Array.isArray(ex.events) && ex.events.length > 0;
-    if (update.finished && !lsHasEvents && !docHasEvents) {
+    const docHasYellow = Array.isArray(ex.events) && ex.events.some((e) => e.t === 'yellow');
+    if (update.finished && !lsHasEvents && !docHasYellow) {
       const espnEvents = await espnSummaryEvents(ex.id, ex.homeTeam?.id, ex.awayTeam?.id);
       if (espnEvents.length) {
         newEvents = espnEvents;

@@ -12,6 +12,13 @@ function EventIcon({ t }) {
       </svg>
     );
   }
+  if (t === 'yellow') {
+    return (
+      <svg className="ev-ico ico-yellow" viewBox="0 0 16 16" width="13" height="15" aria-hidden="true">
+        <rect x="4" y="1.6" width="8" height="12.8" rx="1.6" fill="oklch(0.82 0.16 92)" />
+      </svg>
+    );
+  }
   if (t === 'miss') {
     return (
       <svg className="ev-ico ico-miss" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
@@ -39,6 +46,7 @@ function EventIcon({ t }) {
 // Faroese labels for the second line. FLAGGED for native-speaker review.
 function noteFor(e) {
   if (e.t === 'red') return 'Reytt kort';
+  if (e.t === 'yellow') return 'Gult kort';
   if (e.t === 'miss') return 'Mistur penalti';
   if (e.og) return 'Sjálvmál';
   if (e.pen) return 'Brotsspark';
