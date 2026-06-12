@@ -25,6 +25,14 @@ export default function Leaderboard() {
   // 'now' = the live, full standings. A day key = standings as at end of that day.
   const [sel, setSel] = useState('now');
 
+  // Date chips show PAST days only, newest first. Today is represented by the
+  // "Nú" button (current standings), so it is not repeated as its own chip.
+  const todayKey = foDayKey(Date.now());
+  const dayChips = useMemo(
+    () => days.filter((d) => d.key !== todayKey).slice().reverse(),
+    [days, todayKey]
+  );
+
   const board = useMemo(() => {
     if (sel === 'now') return buildLeaderboard(predictionDocs, matches, { includeLive: true });
     const upto = finished.filter((m) => foDayKey(m.kickoff) <= sel);
@@ -63,10 +71,10 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {days.length > 0 && (
+      {dayChips.length > 0 && (
         <div className="hist">
           <button className={sel === 'now' ? 'active' : ''} onClick={() => setSel('now')}>Nú</button>
-          {days.map((d) => (
+          {dayChips.map((d) => (
             <button key={d.key} className={sel === d.key ? 'active' : ''} onClick={() => setSel(d.key)}>
               {foDateShort(d.ts)}
             </button>

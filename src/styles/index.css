@@ -260,7 +260,10 @@ input { font-family: inherit; }
 /* ESPN country logos are a 3:2 flag centered inside a transparent square. In a
    round frame that leaves the flag letterboxed, so scale it up to crop the
    padding and let the flag fill the circle. */
-.side .flag img { transform: scale(1.55); }
+/* ESPN country logos are a flag floating in a transparent square, so plain
+   object-fit:cover (square into square) still shows the padding. Scale the
+   image up inside the clipped circle so the flag itself fills the frame. */
+.side .flag img { transform: scale(1.82); }
 .flag.mono-chip {
   display: grid; place-items: center; font-family: var(--font-display);
   font-size: 0.75rem; font-weight: 700; color: var(--text-2);
@@ -345,11 +348,12 @@ input { font-family: inherit; }
 .lb-move { font-size: 0.8125rem; font-weight: 600; margin-left: 7px; }
 .lb-move.up { color: var(--win); }
 .lb-move.down { color: var(--live); }
-.lb-total { font-weight: 700; font-size: 1.25rem; color: var(--accent); text-align: right; line-height: 1.05; font-variant-numeric: tabular-nums; }
-.lb-total small { font-size: 0.625rem; color: var(--text-3); display: block; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+.lb-total { font-weight: 700; font-size: 1.25rem; color: var(--accent); font-variant-numeric: tabular-nums; display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; }
+.lb-total small { font-size: 0.6875rem; color: var(--text-3); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 
 /* Horizontal day picker for the standings history. */
-.hist { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 10px; margin-bottom: 6px; }
+.hist { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 4px 0 10px; margin-bottom: 6px; }
+.hist::-webkit-scrollbar { display: none; }
 .hist button {
   flex: 0 0 auto; padding: 7px 13px; border-radius: var(--r-pill);
   border: 1px solid var(--hairline-2); background: var(--surface); color: var(--text-2);
