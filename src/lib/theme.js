@@ -50,9 +50,9 @@ const ACCENT_IDS = ACCENTS.map((a) => a.id);
 export function getAccent() {
   try {
     const v = localStorage.getItem(ACCENT_KEY);
-    return ACCENT_IDS.includes(v) ? v : 'lime';
+    return ACCENT_IDS.includes(v) ? v : 'yellow';
   } catch {
-    return 'lime';
+    return 'yellow';
   }
 }
 

@@ -74,7 +74,7 @@
   --text-2:    oklch(0.78 0.020 264);
   --text-3:    oklch(0.64 0.025 264);
 
-  --accent:        #C6F432;
+  --accent:        #FFE600;
   --accent-strong: color-mix(in oklab, var(--accent), black 16%);
   --accent-soft:   color-mix(in oklab, var(--accent) 18%, transparent);
   --accent-fill:   var(--accent);

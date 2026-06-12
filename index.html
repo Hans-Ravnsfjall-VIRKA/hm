@@ -25,12 +25,12 @@
         }
         var acc = localStorage.getItem('vt-accent');
         var ids = ['lime','cyan','coral','violet','magenta','amber','mint','sky','yellow'];
-        document.documentElement.setAttribute('data-accent', ids.indexOf(acc) >= 0 ? acc : 'lime');
+        document.documentElement.setAttribute('data-accent', ids.indexOf(acc) >= 0 ? acc : 'yellow');
         var fs = localStorage.getItem('vt-fontscale');
         document.documentElement.style.fontSize = fs === '2' ? '112.5%' : fs === '1' ? '106.25%' : '100%';
       } catch (e) {
         document.documentElement.setAttribute('data-theme', 'dark');
-        document.documentElement.setAttribute('data-accent', 'lime');
+        document.documentElement.setAttribute('data-accent', 'yellow');
       }
     </script>
     <script>
