@@ -43,7 +43,7 @@ export const ACCENTS = [
   { id: 'amber',      name: 'Amber gold',    hex: '#FFB627' },
   { id: 'mint',       name: 'Mint',          hex: '#34E5B7' },
   { id: 'sky',        name: 'Sky blue',      hex: '#6EA8FF' },
-  { id: 'chartreuse', name: 'Chartreuse',    hex: '#D4FF66' },
+  { id: 'yellow',     name: 'Electric yellow', hex: '#FFE600' },
 ];
 const ACCENT_IDS = ACCENTS.map((a) => a.id);
 

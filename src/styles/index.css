@@ -105,7 +105,7 @@
 :root[data-theme="dark"][data-accent="amber"]      { --accent: #FFB627; }
 :root[data-theme="dark"][data-accent="mint"]       { --accent: #34E5B7; }
 :root[data-theme="dark"][data-accent="sky"]        { --accent: #6EA8FF; }
-:root[data-theme="dark"][data-accent="chartreuse"] { --accent: #D4FF66; }
+:root[data-theme="dark"][data-accent="yellow"]     { --accent: #FFE600; }
 
 /* The topbar fades the page background to transparent; in dark mode the
    transparent stop must be dark so there is no light edge. */
