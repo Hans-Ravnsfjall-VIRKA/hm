@@ -26,6 +26,16 @@ import { fetchUpdates, PROVIDER_NAME } from './providers/livescoreapi.mjs';
 
 const DRY = !!process.env.DRY_RUN;
 
+// While a match is live or about to kick off, a single scheduled run keeps
+// polling (every WATCH_INTERVAL) until WATCH_MAX, so live data refreshes far
+// faster than the 5-minute cron alone. Between matches it does one pass and
+// exits, so idle runs stay cheap.
+const WATCH = !DRY && process.env.WATCH !== '0';
+const WATCH_INTERVAL_MS = Number(process.env.WATCH_INTERVAL_MS || 60000); // poll cadence during a match
+const WATCH_MAX_MS = Number(process.env.WATCH_MAX_MS || 255000);         // stop before the next cron fires
+const WATCH_LEAD_MS = Number(process.env.WATCH_LEAD_MS || 360000);       // start polling this long before kickoff
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 function initFirebase() {
   if (admin.apps.length) return admin.app();
   const b64 = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -74,7 +84,7 @@ function teamPairKey(n1, n2) {
   return [canon(n1), canon(n2)].sort().join('~');
 }
 
-async function main() {
+async function syncOnce(cache = null) {
   // 1) Pull live data first. Any failure or empty result => no writes at all.
   let updates = [];
   try {
@@ -82,12 +92,12 @@ async function main() {
   } catch (e) {
     console.error(`Provider "${PROVIDER_NAME}" failed - leaving Firestore untouched.`);
     console.error(e.message || e);
-    process.exit(1);
+    return { error: true };
   }
   if (!updates.length) {
     // Empty is normal between matches (no live or recently-finished games).
     console.log(`Provider "${PROVIDER_NAME}" has no live/finished matches right now - nothing to do.`);
-    process.exit(0);
+    return { live: false };
   }
 
   initFirebase();
@@ -95,8 +105,13 @@ async function main() {
 
   // 2) Index existing matches by team pair (a pair can in rare cases map to
   //    more than one fixture, e.g. a knockout rematch, so keep a list).
-  const snap = await db.collection('matches').get();
-  const existing = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  //    Within a single run's watch loop we reuse the list (and keep it current
+  //    after each write) so we don't re-read the whole collection every poll.
+  let existing = cache;
+  if (!existing) {
+    const snap = await db.collection('matches').get();
+    existing = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
   const byPair = new Map();
   for (const m of existing) {
     const k = teamPairKey(m.homeTeam?.name, m.awayTeam?.name);
@@ -205,7 +220,7 @@ async function main() {
   }
 
   console.log(`${PROVIDER_NAME}: matched=${matched} unmatched=${unmatched} changes=${DRY ? '(dry)' : ops.length}`);
-  if (DRY) { console.log('DRY RUN complete - nothing written.'); process.exit(0); }
+  if (DRY) { console.log('DRY RUN complete - nothing written.'); return { live: updates.some((u) => u.live), matches: existing }; }
 
   // 4) Write only changed matches. Merge-only, existing ids only.
   for (let i = 0; i < ops.length; i += 400) {
@@ -215,11 +230,55 @@ async function main() {
     }
     await batch.commit();
   }
+  // Keep the in-memory list current so the next poll in this run compares
+  // against what we just wrote (and not a stale snapshot).
+  for (const op of ops) {
+    const m = existing.find((x) => x.id === op.id);
+    if (m) Object.assign(m, op.update);
+  }
   await db.collection('meta').doc('state').set({
     lastSync: Date.now(), source: PROVIDER_NAME, liveOverlay: true, version: 3,
   }, { merge: true });
 
   console.log(`Overlay updated ${ops.length} match(es) via ${PROVIDER_NAME}. Done.`);
+  return { live: updates.some((u) => u.live), matches: existing };
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+// Cheap check: is any match about to kick off soon? Single-field range query
+// (no composite index needed). Lets us poll tightly to catch kickoff fast.
+async function kickoffImminent() {
+  try {
+    initFirebase();
+    const db = admin.firestore();
+    const now = Date.now();
+    const snap = await db.collection('matches')
+      .where('kickoff', '>', now)
+      .where('kickoff', '<=', now + WATCH_LEAD_MS)
+      .limit(5).get();
+    return !snap.empty;
+  } catch {
+    return false;
+  }
+}
+
+// One scheduled run: sync once, then keep polling while a match is live or
+// imminent, until we approach the next cron. Idle runs return after one pass.
+async function watch() {
+  const start = Date.now();
+  let res = await syncOnce();
+  if (res.error) process.exit(1);
+  if (DRY || !WATCH) process.exit(0);
+
+  let cache = res.matches || null;
+  while (Date.now() - start < WATCH_MAX_MS) {
+    const keepPolling = res.live || (await kickoffImminent());
+    if (!keepPolling) break;
+    await sleep(WATCH_INTERVAL_MS);
+    res = await syncOnce(cache);
+    if (res.error) break;
+    cache = res.matches || cache;
+  }
+  process.exit(0);
+}
+
+watch().catch((err) => { console.error(err); process.exit(1); });
