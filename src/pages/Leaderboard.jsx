@@ -61,7 +61,7 @@ export default function Leaderboard() {
     <>
       <div className="page-head">
         <h1>Støða</h1>
-        <p>{board.length} {board.length === 1 ? 'spælari' : 'spælarar'} · {finished.length} {finished.length === 1 ? 'dystur spældur' : 'dystir spældir'}</p>
+        <p>{board.length} {board.length === 1 ? 'luttakari' : 'luttakarar'} · {finished.length} {finished.length === 1 ? 'dystur spældur' : 'dystir spældir'}</p>
       </div>
 
       {sel === 'now' && liveCount > 0 && (
