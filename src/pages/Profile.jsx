@@ -81,7 +81,7 @@ export default function Profile() {
 
       <div className="page-head">
         <h1>Vangamynd</h1>
-        <p>Stýr navni og kontu.</p>
+        <p>Umsit kontu.</p>
       </div>
 
       <div className="panel" style={{ marginBottom: 14 }}>
