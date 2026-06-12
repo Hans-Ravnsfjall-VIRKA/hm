@@ -2,14 +2,11 @@ name: Sync match data
 
 on:
   schedule:
-    # Cron is UTC. WC 2026 kickoffs run noon ET (16:00 UTC) to midnight ET
-    # (04:00 UTC), so live matches span ~15:00 UTC through ~06:30 UTC. We sync
-    # every 5 min across that window and only every 30 min during the dead
-    # hours (07:00-15:00 UTC = ~08:00-16:00 Faroe time) to keep fixtures fresh.
-    # GitHub may delay scheduled runs under load; fine for a prediction league.
-    - cron: '*/5 15-23 * * *'   # afternoon + evening matches (UTC)
-    - cron: '*/5 0-6 * * *'     # late matches rolling into the early hours (UTC)
-    - cron: '*/30 7-14 * * *'   # dead window: light touch for fixture updates
+    # Cron is UTC. World Cup kickoffs are spread across the day, so we sync
+    # every 5 minutes around the clock: whenever a match goes live it shows up
+    # within ~5 minutes instead of waiting on a slower window. GitHub may delay
+    # scheduled runs under load, which is fine for a prediction league.
+    - cron: '*/5 * * * *'
   workflow_dispatch: # lets you trigger a manual sync from the Actions tab
 
 permissions:
@@ -33,7 +30,9 @@ jobs:
 
       - run: npm ci
 
-      - name: Run sync
+      - name: Run live overlay
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: npm run sync
+          LIVESCORE_API_KEY: ${{ secrets.LIVESCORE_API_KEY }}
+          LIVESCORE_API_SECRET: ${{ secrets.LIVESCORE_API_SECRET }}
+        run: npm run overlay
