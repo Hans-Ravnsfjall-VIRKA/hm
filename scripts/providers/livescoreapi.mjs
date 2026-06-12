@@ -159,25 +159,20 @@ export async function fetchUpdates() {
   const histData = await getJson(`${BASE}/matches/history.json?${auth()}&competition_id=${COMP}&from=${dayUTC(-1)}&to=${dayUTC(0)}`);
   for (const m of (histData?.data?.match || [])) add(toRecord(m, null));
 
-  // 3) Red cards: only for the handful of matches in the live feed that are
-  //    live or just finished. Events are a nice-to-have, so any failure here
-  //    is swallowed and never blocks a score update.
-  const liveArr = liveData?.data?.match || [];
-  const targets = liveArr.filter((m) => {
-    const r = recs.get(String(m.id));
-    return r && (r.live || r.finished);
-  });
-  await Promise.all(targets.map(async (m) => {
-    const evUrl = `${BASE}/matches/events.json?${auth()}&id=${m.id}`;
+  // 3) Events (goals, cards, missed penalties) for every live OR finished match
+  //    we know about - including ones now in history that already dropped out of
+  //    the live feed - so finished games get their scorers backfilled. Failures
+  //    are logged but never block a score update.
+  const targets = [...recs.values()].filter((r) => r.live || r.finished);
+  await Promise.all(targets.map(async (r) => {
+    const evUrl = `${BASE}/matches/events.json?${auth()}&id=${r.matchId}`;
     try {
       const evData = await getJson(evUrl, 12000);
       const raw = evData?.data?.event || [];
-      const evs = extractEvents(raw);
-      const r = recs.get(String(m.id));
-      if (r) r.events = evs;
-      console.log(`events ${m.home?.name} v ${m.away?.name} (id ${m.id}): ${evs.length} shown of ${raw.length} raw`);
+      r.events = extractEvents(raw);
+      console.log(`events ${r.home?.name} v ${r.away?.name} (id ${r.matchId}): ${r.events.length} shown of ${raw.length} raw`);
     } catch (e) {
-      console.log(`events fetch FAILED for ${m.home?.name} v ${m.away?.name} (id ${m.id}): ${e.message || e}`);
+      console.log(`events fetch FAILED for ${r.home?.name} v ${r.away?.name} (id ${r.matchId}): ${e.message || e}`);
     }
   }));
 
