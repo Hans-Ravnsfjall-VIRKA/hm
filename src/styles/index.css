@@ -285,7 +285,13 @@ input { font-family: inherit; }
   font-size: 0.75rem; font-weight: 700; color: var(--text-2);
 }
 
-.center { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 56px; }
+.center { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 56px; align-self: stretch; }
+/* With a score, keep the score centred on the team-name line; the minute or
+   "Liðugt" label hangs just below it instead of pushing the score upward. */
+.center:has(.score) .kick,
+.center:has(.score) .elapsed { position: absolute; left: 0; right: 0; top: calc(50% + 0.8rem); }
+/* With no score yet, the kickoff time sits down on the team-name text baseline. */
+.center:not(:has(.score)) { justify-content: flex-end; padding-bottom: 5px; }
 .kick { font-family: var(--font-body); font-size: 0.8125rem; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .score { font-family: var(--font-display); font-weight: 700; font-size: 1.625rem; letter-spacing: 0; display: flex; align-items: center; gap: 8px; line-height: 1; font-variant-numeric: tabular-nums; }
 .score .sep { color: var(--text-3); font-size: 1.125rem; font-weight: 500; }
