@@ -36,6 +36,58 @@ const WATCH_MAX_MS = Number(process.env.WATCH_MAX_MS || 240000);         // stop
 const WATCH_LEAD_MS = Number(process.env.WATCH_LEAD_MS || 360000);       // start polling this long before kickoff
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// --- ESPN summary fallback for finished-match events -----------------------
+// Our fixture id IS the ESPN event id, and the doc stores ESPN team ids, so
+// when live-score-api carries no events for a finished match we can pull the
+// goals + red cards straight from ESPN's match summary (reliable once a game
+// is over, and orientation matches our stored home/away). Public, no key.
+const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
+
+function espnKeyEvents(data, homeId, awayId) {
+  const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
+  const out = [];
+  for (const d of ke) {
+    const text = (d.type?.text || '').toLowerCase();
+    const isGoal = d.scoringPlay === true || text.includes('goal');
+    const isRed = d.redCard === true || text.includes('red card');
+    if (!isGoal && !isRed) continue;
+    const tid = d.team?.id ?? null;
+    const side = tid != null && String(tid) === String(homeId) ? 'home'
+      : (tid != null && String(tid) === String(awayId) ? 'away' : null);
+    const ath = d.participants?.[0]?.athlete || d.athletesInvolved?.[0];
+    const player = ath?.displayName || ath?.shortName || null;
+    const disp = d.clock?.displayValue || null;
+    out.push({
+      t: isRed ? 'red' : 'goal',
+      m: disp,
+      min: parseInt(disp || '0', 10) || 0,
+      side,
+      player,
+      og: d.ownGoal === true || text.includes('own goal'),
+      pen: d.penaltyKick === true || text.includes('penalty'),
+    });
+  }
+  out.sort((a, b) => a.min - b.min);
+  return out;
+}
+
+async function espnSummaryEvents(id, homeId, awayId) {
+  if (!id) return [];
+  const url = `https://site.web.api.espn.com/apis/site/v2/sports/soccer/${ESPN_LEAGUE}/summary?event=${id}&region=us&lang=en&contentorigin=espn`;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 9000);
+  try {
+    const res = await fetch(url, { headers: { accept: 'application/json' }, signal: ctrl.signal });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return espnKeyEvents(data, homeId, awayId);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 function initFirebase() {
   if (admin.apps.length) return admin.app();
   const b64 = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -188,6 +240,20 @@ async function syncOnce(cache = null) {
           : e
       )).sort((a, b) => (a.min || 0) - (b.min || 0));
       update.events = newEvents;
+    }
+
+    // Fallback: when live-score-api carries no events for a finished match and
+    // the doc has none yet, fill goals + red cards from ESPN's summary (our id
+    // is the ESPN event id). One request per finished match, then it no-ops.
+    const lsHasEvents = Array.isArray(newEvents) && newEvents.length > 0;
+    const docHasEvents = Array.isArray(ex.events) && ex.events.length > 0;
+    if (update.finished && !lsHasEvents && !docHasEvents) {
+      const espnEvents = await espnSummaryEvents(ex.id, ex.homeTeam?.id, ex.awayTeam?.id);
+      if (espnEvents.length) {
+        newEvents = espnEvents;
+        update.events = newEvents;
+        console.log(`  events via ESPN fallback ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${espnEvents.length} (id ${ex.id})`);
+      }
     }
     const redCount = newEvents ? newEvents.filter((e) => e.t === 'red').length : 0;
 
