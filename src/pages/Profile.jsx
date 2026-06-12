@@ -4,6 +4,20 @@ import { useAuth } from '../auth/AuthContext';
 import { BackIcon } from '../components/icons';
 import { getTheme, setTheme } from '../lib/theme';
 
+/* global __APP_VERSION__, __APP_VERSION_NAME__ */
+const VERSION = typeof __APP_VERSION_NAME__ !== 'undefined' ? String(__APP_VERSION_NAME__) : '1.0.0';
+const BUILD = typeof __APP_VERSION__ !== 'undefined' ? String(__APP_VERSION__) : 'dev';
+
+// The build stamp is the epoch millisecond it was built; show it as a readable
+// date-time so it doubles as a "which build is live" check.
+function buildLabel(stamp) {
+  const n = Number(stamp);
+  if (!Number.isFinite(n)) return stamp;
+  const d = new Date(n);
+  const p = (x) => String(x).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export default function Profile() {
   const { user, updateName, resetPassword, logout } = useAuth();
   const navigate = useNavigate();
@@ -96,6 +110,8 @@ export default function Profile() {
         <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }}
           onClick={() => logout().then(() => navigate("/"))}>Rita út</button>
       </div>
+
+      <p className="app-version">Útgáva {VERSION} · bygd {buildLabel(BUILD)}</p>
     </>
   );
 }
