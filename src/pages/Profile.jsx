@@ -75,14 +75,13 @@ export default function Profile() {
       <div className="panel" style={{ marginBottom: 14 }}>
         <div className="setting-row">
           <div>
-            <div className="setting-title">Myrkur háttur</div>
-            <div className="setting-sub">Brúka myrkan ham í appini.</div>
+            <div className="setting-title">Dark mode</div>
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={theme === 'dark'}
-            aria-label="Myrkur háttur"
+            aria-label="Dark mode"
             className={`switch ${theme === 'dark' ? 'on' : ''}`}
             onClick={toggleTheme}
           >

@@ -1,7 +1,8 @@
-// Event timeline for a match being played or finished. Reads match.events
-// (written by the sync): goals, red cards and missed penalties. Goals show a
-// football, red cards a red card, missed penalties a struck-through ball.
-// Shows nothing when there are no events.
+// Two-column event timeline, like livescore.com: home-team events sit on the
+// left, away-team events on the right, the minute runs down a faint centre
+// line, and each goal shows the running scoreline it produced. Reads
+// match.events (goals, red cards, missed penalties). Renders nothing when a
+// match has no events.
 
 function EventIcon({ t }) {
   if (t === 'red') {
@@ -35,30 +36,59 @@ function EventIcon({ t }) {
   );
 }
 
+// Faroese labels for the second line. FLAGGED for native-speaker review.
+function noteFor(e) {
+  if (e.t === 'red') return 'Reytt kort';
+  if (e.t === 'miss') return 'Mistur penalti';
+  if (e.og) return 'Sjálvmál';
+  if (e.pen) return 'Brotsspark';
+  return null;
+}
+
+function EvBody({ e, score }) {
+  const isGoal = e.t === 'goal';
+  const note = noteFor(e);
+  return (
+    <>
+      <span className="evt-ico"><EventIcon t={e.t} /></span>
+      <span className="evt-info">
+        <span className="evt-name">{e.player || (isGoal ? 'Mál' : '')}</span>
+        {isGoal && score ? (
+          <span className="evt-score">{score.h}–{score.a}{note ? ` · ${note}` : ''}</span>
+        ) : note ? (
+          <span className="evt-note">{note}</span>
+        ) : null}
+      </span>
+    </>
+  );
+}
+
 export default function MatchEvents({ match }) {
   if (!(match.live || match.finished)) return null;
   const events = Array.isArray(match.events) ? match.events : [];
   if (!events.length) return null;
 
-  const code = (side) => (side === 'home' ? match.homeTeam?.code : side === 'away' ? match.awayTeam?.code : null);
-  const label = (e) => {
-    if (e.t === 'red') return 'Reytt kort';
-    if (e.t === 'miss') return 'Mistur penalti';
-    if (e.og) return 'Sjálvmál';
-    if (e.pen) return 'Mál (penalti)';
-    return 'Mál';
-  };
+  // Walk the events in order and keep a running scoreline so each goal shows
+  // the score it brought the match to (events arrive sorted by minute).
+  let h = 0;
+  let a = 0;
+  const rows = events.map((e) => {
+    let score = null;
+    if (e.t === 'goal') {
+      if (e.side === 'home') h += 1;
+      else if (e.side === 'away') a += 1;
+      score = { h, a };
+    }
+    return { e, score, home: e.side === 'home' };
+  });
 
   return (
     <div className="events">
-      {events.map((e, i) => (
-        <div className="ev-row" key={i}>
-          <span className="ev-min mono">{e.m || ''}</span>
-          <span className="ev-icon"><EventIcon t={e.t} /></span>
-          <span className="ev-text">
-            {label(e)}{e.player ? <span className="muted"> · {e.player}</span> : null}
-          </span>
-          <span className="ev-team mono">{code(e.side) || ''}</span>
+      {rows.map(({ e, score, home }, i) => (
+        <div className="evt" key={i}>
+          <div className="evt-cell left">{home ? <EvBody e={e} score={score} /> : null}</div>
+          <div className="evt-min mono">{e.m || ''}</div>
+          <div className="evt-cell right">{!home ? <EvBody e={e} score={score} /> : null}</div>
         </div>
       ))}
     </div>

@@ -8,9 +8,9 @@ const DARK_BG = '#14151c'; // matches --bg in the dark token set
 
 export function getTheme() {
   try {
-    return localStorage.getItem(KEY) === 'dark' ? 'dark' : 'light';
+    return localStorage.getItem(KEY) === 'light' ? 'light' : 'dark';
   } catch {
-    return 'light';
+    return 'dark';
   }
 }
 

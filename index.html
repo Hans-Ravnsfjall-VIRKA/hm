@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f3f4f9" />
+    <meta name="theme-color" content="#14151c" />
     <title>VIRKA Tippikapping · HM 2026</title>
     <link rel="icon" href="./virka-mark.svg" />
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -14,14 +14,18 @@
     <meta name="apple-mobile-web-app-title" content="Tippikapping" />
     <meta name="application-name" content="Tippikapping" />
     <script>
-      // Apply the saved theme before first paint so dark users see no flash.
+      // Dark is the default. Apply it before first paint unless the user has
+      // explicitly chosen light, so there is no flash either way.
       try {
-        if (localStorage.getItem('vt-theme') === 'dark') {
-          document.documentElement.setAttribute('data-theme', 'dark');
+        if (localStorage.getItem('vt-theme') === 'light') {
           var m = document.querySelector('meta[name="theme-color"]');
-          if (m) m.setAttribute('content', '#14151c');
+          if (m) m.setAttribute('content', '#f3f4f9');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
         }
-      } catch (e) {}
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
     </script>
     <script>
       // Capture the install prompt early so the UI can offer it after mount.
