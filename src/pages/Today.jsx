@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import MatchCard from '../components/MatchCard';
 import CountdownStrip from '../components/CountdownStrip';
 import { scorePick } from '../lib/scoring';
+import { isLiveNow } from '../lib/tournament';
 import { foLong, foDayShort, sameDay } from '../lib/foDate';
 
 export default function Today() {
@@ -14,12 +15,11 @@ export default function Today() {
 
   const today = matches.filter((m) => sameDay(m.kickoff));
   const HOUR = 3600000;
-  const live = today.filter((m) => m.live);
+  // Live = anything whose kickoff has passed and isn't finished yet, so a match
+  // starts in the app on time without waiting for the sync to flip its status.
+  const live = today.filter((m) => isLiveNow(m, now));
   const done = today.filter((m) => m.finished);
-  // Kickoff has passed but the feed hasn't marked it live or finished yet
-  // (in progress, awaiting data). Should never read "Byrjar seinni".
-  const awaiting = today.filter((m) => !m.live && !m.finished && m.kickoff && m.kickoff <= now);
-  const upcoming = today.filter((m) => !m.live && !m.finished && m.kickoff && m.kickoff > now);
+  const upcoming = today.filter((m) => !m.finished && m.kickoff && m.kickoff > now);
   const soonList = upcoming.filter((m) => m.kickoff - now <= HOUR);
   const laterList = upcoming.filter((m) => m.kickoff - now > HOUR);
 
@@ -70,7 +70,6 @@ export default function Today() {
       {!today.length && nextBlock}
 
       {!!live.length && (<><div className="day-label live-label"><span className="live-dot" aria-hidden="true" />Beint nú</div><div className="stack">{live.map(row)}</div></>)}
-      {!!awaiting.length && (<><div className="day-label live-label"><span className="live-dot" aria-hidden="true" />Bíðar</div><div className="stack">{awaiting.map(row)}</div></>)}
       {!!soonList.length && (
         <div className="stack">
           {soonList.map((m) => (

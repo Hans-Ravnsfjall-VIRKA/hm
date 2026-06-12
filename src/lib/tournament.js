@@ -52,6 +52,19 @@ export function matchHasTeams(m) {
   return isConcreteTeam(m.homeTeam) && isConcreteTeam(m.awayTeam);
 }
 
+/**
+ * Whether a match should be shown as in-progress right now. A match goes live
+ * the moment its kickoff time passes and stays live until the feed marks it
+ * finished - so it never sits on "waiting" past kickoff even when the live
+ * sync runs late (scheduled syncs can be delayed). The feed's own live flag
+ * still counts too, for anything that kicks off early.
+ */
+export function isLiveNow(m, now = Date.now()) {
+  if (!m || m.finished) return false;
+  if (m.live) return true;
+  return m.kickoff != null && now >= m.kickoff;
+}
+
 /** When a single match's pick freezes: 1 hour before kickoff. */
 export function matchEditDeadline(m) {
   return m.kickoff ? m.kickoff - EDIT_CUTOFF_MS : null;

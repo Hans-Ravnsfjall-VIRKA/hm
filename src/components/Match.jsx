@@ -1,4 +1,4 @@
-import { isConcreteTeam } from '../lib/tournament';
+import { isConcreteTeam, isLiveNow } from '../lib/tournament';
 import { foTime } from '../lib/foDate';
 import { useTournamentCtx } from '../hooks/useData';
 
@@ -51,10 +51,11 @@ function TeamSide({ team, side, reds = 0 }) {
 /** A read-only match row. Shows result if finished, live score if live,
  *  kickoff time otherwise. Optionally shows the viewer's own pick + points. */
 export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
-  const { homeTeam, awayTeam, finished, live, result, elapsed, clock, kickoff } = match;
+  const { homeTeam, awayTeam, finished, result, elapsed, clock, kickoff } = match;
   const { now } = useTournamentCtx();
+  const liveNow = isLiveNow(match, now);
 
-  const reds = (live || finished) && Array.isArray(match.events)
+  const reds = (liveNow || finished) && Array.isArray(match.events)
     ? match.events.filter((e) => e.t === 'red') : [];
   const redHome = reds.filter((e) => e.side === 'home').length;
   const redAway = reds.filter((e) => e.side === 'away').length;
@@ -67,10 +68,13 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
         <div className="kick">Liðugt</div>
       </div>
     );
-  } else if (live && result) {
+  } else if (liveNow) {
+    // Live from kickoff. Show the feed's score once it arrives; until then a
+    // 0:0 placeholder so a just-started match reads as in-progress, not waiting.
+    const r = result || { h: 0, a: 0 };
     center = (
       <div className="center">
-        <div className="score live-score"><span>{result.h}</span><span className="sep">:</span><span>{result.a}</span></div>
+        <div className="score live-score"><span>{r.h}</span><span className="sep">:</span><span>{r.a}</span></div>
         <div className="elapsed">{liveMinuteLabel(clock, elapsed, kickoff, now)}</div>
       </div>
     );
