@@ -1,5 +1,21 @@
 import { isConcreteTeam } from '../lib/tournament';
 import { foTime } from '../lib/foDate';
+import { useTournamentCtx } from '../hooks/useData';
+
+// The live minute to show. Prefer the provider's clock ("67'", "Hálvleikur"),
+// then its elapsed number; if the feed gives neither, estimate from kickoff so
+// a live match still shows progress instead of a bare "LIVE".
+function liveMinuteLabel(clock, elapsed, kickoff, now) {
+  if (clock) return clock;
+  if (elapsed) return `${elapsed}'`;
+  if (kickoff && now > kickoff) {
+    const mins = Math.floor((now - kickoff) / 60000);
+    if (mins <= 0) return "1'";
+    if (mins > 90) return "90+'";
+    return `${mins}'`;
+  }
+  return 'LIVE';
+}
 
 /** Country flag. Uses the synced flag URL; falls back to a mono monogram. */
 export function Flag({ team }) {
@@ -35,7 +51,8 @@ function TeamSide({ team, side, reds = 0 }) {
 /** A read-only match row. Shows result if finished, live score if live,
  *  kickoff time otherwise. Optionally shows the viewer's own pick + points. */
 export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
-  const { homeTeam, awayTeam, finished, live, result, elapsed, clock } = match;
+  const { homeTeam, awayTeam, finished, live, result, elapsed, clock, kickoff } = match;
+  const { now } = useTournamentCtx();
 
   const reds = (live || finished) && Array.isArray(match.events)
     ? match.events.filter((e) => e.t === 'red') : [];
@@ -54,7 +71,7 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
     center = (
       <div className="center">
         <div className="score live-score"><span>{result.h}</span><span className="sep">:</span><span>{result.a}</span></div>
-        <div className="elapsed">{clock || (elapsed ? `${elapsed}'` : 'LIVE')}</div>
+        <div className="elapsed">{liveMinuteLabel(clock, elapsed, kickoff, now)}</div>
       </div>
     );
   } else {

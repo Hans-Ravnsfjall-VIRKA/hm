@@ -20,6 +20,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 6   # a watch run polls ~4 min during a match; never hang longer
     steps:
       - uses: actions/checkout@v4
 

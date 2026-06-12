@@ -150,7 +150,10 @@ export async function fetchUpdates() {
 
   // 1) Live + recently finished.
   const liveData = await getJson(`${BASE}/matches/live.json?${auth()}&competition_id=${COMP}`);
-  for (const m of (liveData?.data?.match || [])) add(toRecord(m, dayUTC(0)));
+  for (const m of (liveData?.data?.match || [])) {
+    console.log(`live ${m.home?.name} v ${m.away?.name}: status=${m.status} time=${JSON.stringify(m.time)} score=${JSON.stringify(m.scores?.score)}`);
+    add(toRecord(m, dayUTC(0)));
+  }
 
   // 2) Finished backfill (today + yesterday, UTC).
   const histData = await getJson(`${BASE}/matches/history.json?${auth()}&competition_id=${COMP}&from=${dayUTC(-1)}&to=${dayUTC(0)}`);
@@ -165,13 +168,16 @@ export async function fetchUpdates() {
     return r && (r.live || r.finished);
   });
   await Promise.all(targets.map(async (m) => {
+    const evUrl = `${BASE}/matches/events.json?${auth()}&id=${m.id}`;
     try {
-      const evUrl = `${BASE}/matches/events.json?${auth()}&id=${m.id}`;
-      const evData = await getJson(evUrl);
+      const evData = await getJson(evUrl, 12000);
+      const raw = evData?.data?.event || [];
+      const evs = extractEvents(raw);
       const r = recs.get(String(m.id));
-      if (r) r.events = extractEvents(evData?.data?.event || []);
-    } catch {
-      /* ignore - keep the score update even if events fail */
+      if (r) r.events = evs;
+      console.log(`events ${m.home?.name} v ${m.away?.name} (id ${m.id}): ${evs.length} shown of ${raw.length} raw`);
+    } catch (e) {
+      console.log(`events fetch FAILED for ${m.home?.name} v ${m.away?.name} (id ${m.id}): ${e.message || e}`);
     }
   }));
 

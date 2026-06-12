@@ -32,7 +32,7 @@ const DRY = !!process.env.DRY_RUN;
 // exits, so idle runs stay cheap.
 const WATCH = !DRY && process.env.WATCH !== '0';
 const WATCH_INTERVAL_MS = Number(process.env.WATCH_INTERVAL_MS || 60000); // poll cadence during a match
-const WATCH_MAX_MS = Number(process.env.WATCH_MAX_MS || 255000);         // stop before the next cron fires
+const WATCH_MAX_MS = Number(process.env.WATCH_MAX_MS || 240000);         // stop before the next cron fires
 const WATCH_LEAD_MS = Number(process.env.WATCH_LEAD_MS || 360000);       // start polling this long before kickoff
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
