@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { BackIcon } from '../components/icons';
-import { getTheme, setTheme } from '../lib/theme';
+import { getTheme, setTheme, ACCENTS, getAccent, setAccent, getFontScale, setFontScale } from '../lib/theme';
 
 /* global __APP_VERSION__, __APP_VERSION_NAME__ */
 const VERSION = typeof __APP_VERSION_NAME__ !== 'undefined' ? String(__APP_VERSION_NAME__) : '1.0.0';
@@ -26,11 +26,23 @@ export default function Profile() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [theme, setThemeState] = useState(getTheme());
+  const [accent, setAccentState] = useState(getAccent());
+  const [fontScale, setFontScaleState] = useState(getFontScale());
 
   function toggleTheme() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     setThemeState(nextTheme);
+  }
+
+  function pickAccent(id) {
+    setAccent(id);
+    setAccentState(id);
+  }
+
+  function pickFontScale(s) {
+    setFontScale(s);
+    setFontScaleState(s);
   }
 
   async function save() {
@@ -101,6 +113,43 @@ export default function Profile() {
           >
             <span className="switch-knob" aria-hidden="true" />
           </button>
+        </div>
+
+        {theme === 'dark' && (
+          <div className="setting-stack">
+            <div className="setting-title">Litur</div>
+            <div className="accent-grid">
+              {ACCENTS.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`accent-dot ${accent === a.id ? 'sel' : ''}`}
+                  style={{ '--dot': a.hex }}
+                  onClick={() => pickAccent(a.id)}
+                  aria-label={a.name}
+                  aria-pressed={accent === a.id}
+                  title={a.name}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="setting-stack">
+          <div className="setting-title">Skriftstødd</div>
+          <div className="seg" role="group" aria-label="Skriftstødd">
+            {['0', '1', '2'].map((s, i) => (
+              <button
+                key={s}
+                type="button"
+                className={`seg-btn ${fontScale === s ? 'sel' : ''}`}
+                onClick={() => pickFontScale(s)}
+                aria-pressed={fontScale === s}
+              >
+                <span style={{ fontSize: `${13 + i * 3}px`, lineHeight: 1, fontWeight: 700 }}>A</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

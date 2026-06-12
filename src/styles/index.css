@@ -74,11 +74,11 @@
   --text-2:    oklch(0.78 0.020 264);
   --text-3:    oklch(0.64 0.025 264);
 
-  --accent:        oklch(0.72 0.18 53);
-  --accent-strong: oklch(0.62 0.185 50);
-  --accent-soft:   oklch(0.72 0.18 53 / 0.18);
-  --accent-fill:   oklch(0.56 0.18 48);
-  --accent-text:   oklch(0.99 0.003 264);
+  --accent:        #FF6B4A;
+  --accent-strong: color-mix(in oklab, var(--accent), black 16%);
+  --accent-soft:   color-mix(in oklab, var(--accent) 18%, transparent);
+  --accent-fill:   var(--accent);
+  --accent-text:   oklch(0.18 0.015 264);
 
   --live:    oklch(0.66 0.20 25);
   --win:     oklch(0.62 0.150 148);
@@ -93,6 +93,19 @@
 
   --shadow: 0 1px 2px oklch(0 0 0 / 0.40), 0 10px 26px oklch(0 0 0 / 0.50);
 }
+
+/* Selectable accent colours, dark mode only. Only --accent is set; fill, soft
+   and strong derive from it, and dark text sits on every fill (all nine pass
+   AA both as foreground on the dark surfaces and behind their button text). */
+:root[data-theme="dark"][data-accent="lime"]       { --accent: #C6F432; }
+:root[data-theme="dark"][data-accent="cyan"]       { --accent: #2DD4FF; }
+:root[data-theme="dark"][data-accent="coral"]      { --accent: #FF6B4A; }
+:root[data-theme="dark"][data-accent="violet"]     { --accent: #A78BFA; }
+:root[data-theme="dark"][data-accent="magenta"]    { --accent: #FF2E97; }
+:root[data-theme="dark"][data-accent="amber"]      { --accent: #FFB627; }
+:root[data-theme="dark"][data-accent="mint"]       { --accent: #34E5B7; }
+:root[data-theme="dark"][data-accent="sky"]        { --accent: #6EA8FF; }
+:root[data-theme="dark"][data-accent="chartreuse"] { --accent: #D4FF66; }
 
 /* The topbar fades the page background to transparent; in dark mode the
    transparent stop must be dark so there is no light edge. */
@@ -717,6 +730,30 @@ html, body { overscroll-behavior-y: none; }
   box-shadow: 0 1px 3px oklch(0 0 0 / 0.25); transition: left 0.2s var(--ease);
 }
 .switch.on .switch-knob { left: 23px; }
+
+/* stacked setting (label above a control), divided from the row above it */
+.setting-stack { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--hairline-2); }
+.setting-stack .setting-title { margin-bottom: 10px; }
+
+/* accent colour swatches */
+.accent-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; }
+.accent-dot {
+  aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
+  background: var(--dot); box-shadow: inset 0 0 0 1px oklch(1 1 1 / 0.12);
+  position: relative; transition: transform 0.15s var(--ease);
+}
+.accent-dot:active { transform: scale(0.92); }
+.accent-dot.sel { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--dot); }
+@media (max-width: 360px) { .accent-grid { grid-template-columns: repeat(5, 1fr); } }
+
+/* segmented control (font size) */
+.seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: var(--r-lg); }
+.seg-btn {
+  min-width: 52px; height: 40px; display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: calc(var(--r-lg) - 4px); background: transparent; color: var(--text-2);
+  cursor: pointer; transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.seg-btn.sel { background: var(--accent); color: var(--accent-text); }
 
 /* --- Collapsible dropdowns (match events / participants' tips) ---------- */
 .disclosure {

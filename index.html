@@ -14,8 +14,8 @@
     <meta name="apple-mobile-web-app-title" content="Tippikapping" />
     <meta name="application-name" content="Tippikapping" />
     <script>
-      // Dark is the default. Apply it before first paint unless the user has
-      // explicitly chosen light, so there is no flash either way.
+      // Dark is the default. Apply theme, accent and font size before first
+      // paint so there is no flash of the wrong colour or size.
       try {
         if (localStorage.getItem('vt-theme') === 'light') {
           var m = document.querySelector('meta[name="theme-color"]');
@@ -23,8 +23,14 @@
         } else {
           document.documentElement.setAttribute('data-theme', 'dark');
         }
+        var acc = localStorage.getItem('vt-accent');
+        var ids = ['lime','cyan','coral','violet','magenta','amber','mint','sky','chartreuse'];
+        document.documentElement.setAttribute('data-accent', ids.indexOf(acc) >= 0 ? acc : 'coral');
+        var fs = localStorage.getItem('vt-fontscale');
+        document.documentElement.style.fontSize = fs === '2' ? '112.5%' : fs === '1' ? '106.25%' : '100%';
       } catch (e) {
         document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.setAttribute('data-accent', 'coral');
       }
     </script>
     <script>

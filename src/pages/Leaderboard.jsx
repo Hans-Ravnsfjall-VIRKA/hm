@@ -73,7 +73,7 @@ export default function Leaderboard() {
 
       {dayChips.length > 0 && (
         <div className="hist">
-          <button className={sel === 'now' ? 'active' : ''} onClick={() => setSel('now')}>Nú</button>
+          <button className={sel === 'now' ? 'active' : ''} onClick={() => setSel('now')}>Í dag</button>
           {dayChips.map((d) => (
             <button key={d.key} className={sel === d.key ? 'active' : ''} onClick={() => setSel(d.key)}>
               {foDateShort(d.ts)}
