@@ -18,7 +18,7 @@ export default function Today() {
   // Live = anything whose kickoff has passed and isn't finished yet, so a match
   // starts in the app on time without waiting for the sync to flip its status.
   const live = today.filter((m) => isLiveNow(m, now));
-  const done = today.filter((m) => m.finished);
+  const done = today.filter((m) => m.finished).sort((a, b) => (b.kickoff || 0) - (a.kickoff || 0));
   const upcoming = today.filter((m) => !m.finished && m.kickoff && m.kickoff > now);
   const soonList = upcoming.filter((m) => m.kickoff - now <= HOUR);
   const laterList = upcoming.filter((m) => m.kickoff - now > HOUR);
