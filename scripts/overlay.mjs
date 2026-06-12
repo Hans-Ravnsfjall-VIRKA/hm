@@ -243,18 +243,19 @@ async function syncOnce(cache = null) {
       update.events = newEvents;
     }
 
-    // Fallback: when live-score-api carries no events for a finished match,
-    // fill goals + cards from ESPN's summary (our id is the ESPN event id). We
-    // keep trying until the doc has a yellow card, so matches filled before
-    // yellows were supported get backfilled; then it settles into a no-op.
+    // Fallback: live-score-api carries no events for these matches, so pull
+    // goals + cards from ESPN's summary (our id is the ESPN event id). Do it
+    // every sync while a match is LIVE (new goals show within a poll), and for
+    // a FINISHED match until the backfill has a yellow card on it; after that
+    // it settles into a no-op.
     const lsHasEvents = Array.isArray(newEvents) && newEvents.length > 0;
     const docHasYellow = Array.isArray(ex.events) && ex.events.some((e) => e.t === 'yellow');
-    if (update.finished && !lsHasEvents && !docHasYellow) {
+    if (!lsHasEvents && (update.live || (update.finished && !docHasYellow))) {
       const espnEvents = await espnSummaryEvents(ex.id, ex.homeTeam?.id, ex.awayTeam?.id);
       if (espnEvents.length) {
         newEvents = espnEvents;
         update.events = newEvents;
-        console.log(`  events via ESPN fallback ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${espnEvents.length} (id ${ex.id})`);
+        console.log(`  events via ESPN ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${espnEvents.length} live=${!!update.live} (id ${ex.id})`);
       }
     }
     const redCount = newEvents ? newEvents.filter((e) => e.t === 'red').length : 0;
