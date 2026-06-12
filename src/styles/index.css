@@ -289,7 +289,7 @@ input { font-family: inherit; }
 /* With a score, keep the score centred on the team-name line; the minute or
    "Liðugt" label hangs just below it instead of pushing the score upward. */
 .center:has(.score) .kick,
-.center:has(.score) .elapsed { position: absolute; left: 0; right: 0; top: calc(50% + 0.8rem); }
+.center:has(.score) .elapsed { position: absolute; left: 0; right: 0; top: calc(50% + 0.8rem); text-align: center; }
 /* With no score yet, the kickoff time sits down on the team-name text baseline. */
 .center:not(:has(.score)) { justify-content: flex-end; padding-bottom: 5px; }
 .kick { font-family: var(--font-body); font-size: 0.8125rem; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
