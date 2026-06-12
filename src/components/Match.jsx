@@ -64,7 +64,7 @@ export function MatchRow({ match, yourPick, yourPoints, scoreText, onClick }) {
     center = (
       <div className="center">
         <div className="score"><span>{result.h}</span><span className="sep">:</span><span>{result.a}</span></div>
-        <div className="kick">Spældur</div>
+        <div className="kick">Liðugt</div>
       </div>
     );
   } else if (live && result) {
