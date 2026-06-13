@@ -45,8 +45,9 @@ const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
 // Bump when the parser/detail changes in a way that should re-pull already
 // stored finished matches once. v4 adds stats/line-ups/commentary detail;
 // v5 relabels a stat (fouls); v6 relabels possession + offsides; v7 pass %;
-// v8 adds Faroese commentary templates; v9 finalises template wording.
-const EV_FIX = 9;
+// v8 adds Faroese commentary templates; v9 finalises template wording;
+// v10 adds Faroese fragment-assembler for goal/attempt/save/block/woodwork lines.
+const EV_FIX = 10;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
@@ -135,6 +136,226 @@ function espnLineups(data, homeId, awayId) {
 }
 
 // =====================================================================
+// Faroese commentary FRAGMENTS (user-supplied, native).  Goal / attempt /
+// save / block / woodwork lines are composed by ESPN from interchangeable
+// pieces; we parse a line into its slots, swap each English fragment for the
+// Faroese below, and rebuild it in the Faroese frame.  If ANY fragment in a
+// line is unknown, the whole line stays English (never half-translated).
+// Edit freely - this block is the single source of truth.
+// =====================================================================
+const FRAG = {
+  SHOT: {
+    'right footed shot': 'skýtur við høgra fóti',
+    'left footed shot': 'skýtur við vinstra fóti',
+    'header': 'stútar',
+  },
+  FROM: {
+    'from the centre of the box': 'úr miðjuni í brotsteiginum',
+    'from the left side of the box': 'úr vinstru síðu í brotsteiginum',
+    'from the right side of the box': 'úr høgru síðu í brotsteiginum',
+    'from outside the box': 'uttan fyri brotsteigin',
+    'from the left': 'úr vinstru',
+    'from the right': 'úr høgru',
+    'from very close range': 'av heilt stuttari fjarstøðu',
+    'from more than 35 yards': 'úr meira enn 30 metrar frástøðu',
+    'from long range on the left': 'langt úti úr vinstru',
+    'from long range on the right': 'langt úti úr høgru',
+    'from a difficult angle on the left': 'úr torførum vinkli úr vinstru',
+    'from a difficult angle on the right': 'úr torførum vinkli úr høgru',
+    'from a difficult angle and long range': 'úr torførum vinkli og langt úti',
+  },
+  TO: {
+    'to the bottom left corner': 'í niðara vinstra horn',
+    'to the bottom right corner': 'í niðara høgra horn',
+    'to the top left corner': 'í ovara vinstra horn',
+    'to the top right corner': 'í ovara høgra horn',
+    'to the centre of the goal': 'mitt í málið',
+    'to the top centre of the goal': 'ovarliga mitt í málið',
+    'high into the middle of the goal': 'høgt mitt í málið',
+  },
+  MISS: {
+    'misses to the left': 'fer framvið til vinstru',
+    'misses to the right': 'fer framvið til høgru',
+    'is too high': 'fer upp um málið',
+    'is just a bit too high': 'fer beint upp um málið',
+    'is high and wide to the left': 'fer upp um og framvið til vinstru',
+    'is high and wide to the right': 'fer upp um og framvið til høgru',
+    'is close, but misses to the left': 'er nær við, men fer framvið til vinstru',
+    'is close, but misses to the right': 'er nær við, men fer framvið til høgru',
+  },
+  SAVE: {
+    'is saved in the bottom left corner': 'verður bjargað í niðara vinstra horni',
+    'is saved in the bottom right corner': 'verður bjargað í niðara høgra horni',
+    'is saved in the top left corner': 'verður bjargað í ovara vinstra horni',
+    'is saved in the top right corner': 'verður bjargað í ovara høgra horni',
+    'is saved in the centre of the goal': 'verður bjargað mitt í málinum',
+    'is saved in the top centre of the goal': 'verður bjargað ovarliga mitt í málinum',
+    'is saved': 'verður bjargað',
+  },
+  STONG: {
+    'hits the left post': 'rakar vinstru stong',
+    'hits the right post': 'rakar høgru stong',
+    'hits the bar': 'rakar tvørtræið',
+  },
+};
+const CONTEXT_FO = {
+  'following a corner': 'eftir hornaspark',
+  'following a fast break': 'eftir skjótt mótálop',
+  'following a set piece': 'eftir deyðbólt',
+  'following a free kick': 'eftir fríspark',
+};
+// Assist suffixes (the part after the assister's name), most specific first.
+const ASSIST_SUFFIX = [
+  [' with a cross following a corner', (n) => `${n} legði upp við innleggi eftir hornaspark.`],
+  [' with a cross', (n) => `${n} legði upp við innleggi.`],
+  [' with a through ball', (n) => `${n} legði upp við gjøgnumbólti.`],
+  [' with a headed pass', (n) => `${n} legði upp við stútara.`],
+  [' following a fast break', (n) => `${n} legði upp eftir skjótt mótálop.`],
+];
+
+// Pre-sort each slot's keys longest-first so e.g. "from the left side of the
+// box" wins over "from the left".  Stored as [lowercaseEnglish, faroese].
+function fragPrep(obj) {
+  return Object.entries(obj)
+    .map(([en, fo]) => [en.toLowerCase(), fo])
+    .sort((a, b) => b[0].length - a[0].length);
+}
+const FRAG_SORTED = Object.fromEntries(
+  Object.entries(FRAG).map(([k, v]) => [k, fragPrep(v)])
+);
+
+// Consume one fragment of `slot` from the front of `rest`; null if none match.
+function fragTake(rest, slot) {
+  const s = String(rest).replace(/^[\s.,]+/, '');
+  const low = s.toLowerCase();
+  for (const [en, fo] of FRAG_SORTED[slot]) {
+    if (low.startsWith(en)) return { fo, rest: s.slice(en.length) };
+  }
+  return null;
+}
+function fragContext(str) {
+  const s = String(str).trim().replace(/\.+$/, '').toLowerCase();
+  return CONTEXT_FO[s] || null;
+}
+// "Alex Freeman", "Alex Freeman with a cross", "... following a fast break"
+function fragAssist(str) {
+  const s = String(str).trim().replace(/\.+$/, '');
+  for (const [sx, fn] of ASSIST_SUFFIX) {
+    if (s.toLowerCase().endsWith(sx)) return fn(s.slice(0, s.length - sx.length).trim());
+  }
+  // Unknown trailing descriptor -> bail so we never drop meaning silently.
+  if (/ with a | following a /i.test(s)) return null;
+  return `${s} legði upp.`;
+}
+// After the shot outcome, peel an optional standalone context and/or assist.
+// Returns {context, assist} or null if anything is left unaccounted for.
+function fragTail(rest) {
+  let r = String(rest).replace(/^[\s.,]+|[\s.,]+$/g, '');
+  let context = '', assist = '';
+  if (!r) return { context, assist };
+  const am = r.match(/Assisted by\s+(.+)$/i);
+  if (am) {
+    const pre = r.slice(0, am.index).replace(/^[\s.,]+|[\s.,]+$/g, '');
+    if (pre) { const c = fragContext(pre); if (!c) return null; context = c; }
+    const a = fragAssist(am[1]); if (!a) return null; assist = a;
+    return { context, assist };
+  }
+  const c = fragContext(r); if (!c) return null;
+  return { context: c, assist: '' };
+}
+function fragAssemble(prefix, player, team, clause, context, assist) {
+  let c = clause;
+  if (context) c += ` ${context}`;
+  let s = `${prefix}${player} (${team}) ${c}.`;
+  if (assist) s += ` ${assist}`;
+  return s;
+}
+
+// Translate ESPN's composed goal/attempt/woodwork lines; null if not one
+// (or if any fragment is unknown -> caller leaves the English line as-is).
+function translateComposed(raw) {
+  const t = String(raw || '')
+    .replace(/right-footed/gi, 'right footed')
+    .replace(/left-footed/gi, 'left footed')
+    .replace(/through-ball/gi, 'through ball')
+    .trim();
+
+  // GOAL (incl. penalty)
+  let m = t.match(/^Goal!\s+(.+?\d)\.\s+(.+?)\s+\(([^)]+)\)\s+(.+)$/is);
+  if (m) {
+    const [, score, player, team, bodyRaw] = m;
+    const body = bodyRaw.trim();
+    if (/^converts the penalty/i.test(body)) {
+      const pm = body.match(/^converts the penalty with a (?:right footed shot|left footed shot|header)\s+(.+)$/i);
+      if (!pm) return null;
+      const to = fragTake(pm[1], 'TO'); if (!to) return null;
+      const tail = fragTail(to.rest); if (!tail) return null;
+      return fragAssemble(`Mál! ${score}. `, player, team,
+        `skorar upp á brotsspark ${to.fo}`, tail.context, tail.assist);
+    }
+    const sh = fragTake(body, 'SHOT'); if (!sh) return null;
+    const fr = fragTake(sh.rest, 'FROM'); if (!fr) return null;
+    const to = fragTake(fr.rest, 'TO'); if (!to) return null;
+    const tail = fragTail(to.rest); if (!tail) return null;
+    return fragAssemble(`Mál! ${score}. `, player, team,
+      `${sh.fo} ${fr.fo} ${to.fo}`, tail.context, tail.assist);
+  }
+
+  // ATTEMPT MISSED
+  m = t.match(/^Attempt missed\.\s+(.+?)\s+\(([^)]+)\)\s+(.+)$/is);
+  if (m) {
+    const [, player, team, body] = m;
+    const sh = fragTake(body, 'SHOT'); if (!sh) return null;
+    const fr = fragTake(sh.rest, 'FROM'); if (!fr) return null;
+    const out = fragTake(fr.rest, 'MISS'); if (!out) return null;
+    const tail = fragTail(out.rest); if (!tail) return null;
+    return fragAssemble('Roynd framvið. ', player, team,
+      `${sh.fo} ${fr.fo} ${out.fo}`, tail.context, tail.assist);
+  }
+
+  // ATTEMPT SAVED
+  m = t.match(/^Attempt saved\.\s+(.+?)\s+\(([^)]+)\)\s+(.+)$/is);
+  if (m) {
+    const [, player, team, body] = m;
+    const sh = fragTake(body, 'SHOT'); if (!sh) return null;
+    const fr = fragTake(sh.rest, 'FROM'); if (!fr) return null;
+    const out = fragTake(fr.rest, 'SAVE'); if (!out) return null;
+    const tail = fragTail(out.rest); if (!tail) return null;
+    return fragAssemble('Roynd bjargað. ', player, team,
+      `${sh.fo} ${fr.fo} ${out.fo}`, tail.context, tail.assist);
+  }
+
+  // ATTEMPT BLOCKED
+  m = t.match(/^Attempt blocked\.\s+(.+?)\s+\(([^)]+)\)\s+(.+)$/is);
+  if (m) {
+    const [, player, team, body] = m;
+    const sh = fragTake(body, 'SHOT'); if (!sh) return null;
+    const fr = fragTake(sh.rest, 'FROM'); if (!fr) return null;
+    let rest = fr.rest.replace(/^[\s.,]+/, '');
+    if (!/^is blocked\b/i.test(rest)) return null;
+    rest = rest.replace(/^is blocked\b/i, '');
+    const tail = fragTail(rest); if (!tail) return null;
+    return fragAssemble('Roynd blokerað. ', player, team,
+      `${sh.fo} ${fr.fo}, men royndin verður blokerað`, tail.context, tail.assist);
+  }
+
+  // WOODWORK (hits the bar / post) - ESPN puts the post before the shot.
+  m = t.match(/^(.+?)\s+\(([^)]+)\)\s+(hits the (?:left post|right post|bar)\b.*)$/is);
+  if (m) {
+    const [, player, team, body] = m;
+    const st = fragTake(body, 'STONG'); if (!st) return null;
+    let rest = st.rest.replace(/^[\s.,]+/, '').replace(/^with a\s+/i, '');
+    const sh = fragTake(rest, 'SHOT'); if (!sh) return null;
+    const fr = fragTake(sh.rest, 'FROM'); if (!fr) return null;
+    const tail = fragTail(fr.rest); if (!tail) return null;
+    return fragAssemble('', player, team,
+      `${sh.fo} ${fr.fo} ${st.fo}`, tail.context, tail.assist);
+  }
+
+  return null;
+}
+
+// =====================================================================
 // Faroese commentary templates.  FLAGGED: all Faroese below needs native
 // review - edit freely, this block is the single source of truth. Only the
 // fully-structured ESPN lines are translated (whole line, never half); player
@@ -161,12 +382,15 @@ function translateCommentary(text) {
     [/^corner,\s*(.+?)\.?$/i, (m) => `Hornaspark til ${m[1]}.`],
     [/^delay over\b.*$/i, () => 'Steðgurin er av. Klárt er at halda fram.'],
     [/^delay in match\s*(.+?)\.?$/i, (m) => `Steðgur í dystinum – ${m[1]}.`],
+    [/^penalty saved!?$/i, () => 'Brotsspark bjargað!'],
+    [/^penalty missed!?$/i, () => 'Brotsspark misnýtt!'],
+    [/^own goal by (.+?)[,(]\s*([^)]+?)\)?\.?$/i, (m) => `Sjálvmál av ${m[1].trim()} (${m[2].trim()}).`],
   ];
   for (const [re, fn] of rules) {
     const m = t.match(re);
     if (m) return fn(m);
   }
-  return null;
+  return translateComposed(t);
 }
 
 function espnCommentary(data) {
