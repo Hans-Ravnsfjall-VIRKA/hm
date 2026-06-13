@@ -25,7 +25,7 @@ export default function MatchTabs({ match, yourPick, yourPoints, scoreText }) {
   }
 
   if (!tabs.length) return null;
-  const activeTab = tabs.find((t) => t.id === active) || tabs[0];
+  const activeTab = active ? tabs.find((t) => t.id === active) : null;
 
   return (
     <div className="match-tabs">
@@ -35,15 +35,15 @@ export default function MatchTabs({ match, yourPick, yourPoints, scoreText }) {
             key={t.id}
             type="button"
             role="tab"
-            aria-selected={t.id === activeTab.id}
-            className={`match-tab ${t.id === activeTab.id ? 'active' : ''}`}
-            onClick={() => setActive(t.id)}
+            aria-selected={activeTab?.id === t.id}
+            className={`match-tab ${activeTab?.id === t.id ? 'active' : ''}`}
+            onClick={() => setActive((cur) => (cur === t.id ? null : t.id))}
           >
             {t.label}
           </button>
         ))}
       </div>
-      <div className="match-tabpanel" role="tabpanel">{activeTab.render()}</div>
+      {activeTab && <div className="match-tabpanel" role="tabpanel">{activeTab.render()}</div>}
     </div>
   );
 }

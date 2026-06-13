@@ -45,7 +45,7 @@ const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
 // Bump when the event parser changes in a way that should re-correct already
 // stored finished matches once (e.g. own-goal side fix). Finished matches are
 // re-pulled from ESPN until stamped with the current version, then settle.
-const EV_FIX = 2;
+const EV_FIX = 3;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
@@ -58,11 +58,8 @@ function espnKeyEvents(data, homeId, awayId) {
     if (!isGoal && !isRed && !isYellow) continue;
     const og = d.ownGoal === true || text.includes('own goal');
     const tid = d.team?.id ?? null;
-    let side = tid != null && String(tid) === String(homeId) ? 'home'
+    const side = tid != null && String(tid) === String(homeId) ? 'home'
       : (tid != null && String(tid) === String(awayId) ? 'away' : null);
-    // ESPN tags an own goal with the scoring player's own team, but the goal
-    // counts for the opponent, so flip the side it's credited to.
-    if (isGoal && og && side) side = side === 'home' ? 'away' : 'home';
     const ath = d.participants?.[0]?.athlete || d.athletesInvolved?.[0];
     const player = ath?.displayName || ath?.shortName || null;
     const disp = d.clock?.displayValue || null;
@@ -296,6 +293,17 @@ async function syncOnce(cache = null) {
     const close = { status: 'FT', live: false, finished: true, clock: null, elapsed: null };
     if (DRY) console.log(`  CLOSE ${m.homeTeam?.name} v ${m.awayTeam?.name}: LIVE -> FT (stale, not in feed, id ${m.id})`);
     else ops.push({ id: m.id, update: close });
+  }
+
+  // Re-correct finished matches that have dropped out of the live-score-api
+  // feed but still carry an older event format (e.g. the own-goal fix). Pull
+  // their events straight from ESPN by id; once stamped they settle.
+  for (const m of existing) {
+    if (covered.has(m.id) || !m.finished || m.evFix === EV_FIX) continue;
+    const espnEvents = await espnSummaryEvents(m.id, m.homeTeam?.id, m.awayTeam?.id);
+    if (!espnEvents.length) continue;
+    if (DRY) console.log(`  RECORRECT ${m.homeTeam?.name} v ${m.awayTeam?.name}: ${espnEvents.length} ev (id ${m.id})`);
+    else ops.push({ id: m.id, update: { events: espnEvents, evFix: EV_FIX } });
   }
 
   console.log(`${PROVIDER_NAME}: matched=${matched} unmatched=${unmatched} changes=${DRY ? '(dry)' : ops.length}`);
