@@ -32,6 +32,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Match detail (stats, line-ups, commentary): world-readable, server-written.
+    match /details/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Tournament metadata: world-readable, server-written.
     match /meta/{doc} {
       allow read: if true;

@@ -1,31 +1,54 @@
 import { useState } from 'react';
 import MatchPredictions from './MatchPredictions';
 import MatchEvents from './MatchEvents';
+import MatchStats from './MatchStats';
+import MatchLineups from './MatchLineups';
+import MatchCommentary from './MatchCommentary';
 import { hasMatchEvents } from './Disclosure';
 import { matchEditable } from '../lib/tournament';
-import { useTournamentCtx } from '../hooks/useData';
+import { useTournamentCtx, useMatchDetail } from '../hooks/useData';
 
-// A row of tabs beneath a match, in the style of livescore.com: each tab only
-// appears when it has something to show, and the first available one opens by
-// default. Tipping is offered up until picks lock (1 hour before kickoff);
-// Dystarstøður (goals, cards) appears once a match is live or finished.
+// Livescore-style tab strip beneath a match. Tabs appear only when they have
+// something to show and all available ones sit side-by-side. Nothing is open
+// by default; tapping a tab opens it and tapping it again collapses it.
 //
-// Frásøgn (commentary), Hagtøl (stats) and Liðini (line-ups) are added in a
-// later pass once their data is wired through from the ESPN summary.
-export default function MatchTabs({ match, yourPick, yourPoints, scoreText }) {
+// Tipping + Dystarstøður run on data already loaded with the match. Frásøgn,
+// Liðini and Hagtøl live in a separate details/{id} doc that loads only while
+// one of those tabs is open.
+const DETAIL_TABS = new Set(['commentary', 'lineups', 'stats']);
+
+function Loading({ loading }) {
+  return <div className="empty"><p>{loading ? 'Innlesur…' : 'Eingin dáta enn.'}</p></div>;
+}
+
+export default function MatchTabs({ match }) {
   const { now } = useTournamentCtx();
   const [active, setActive] = useState(null);
 
   const tabs = [];
-  if (matchEditable(match, now)) {
-    tabs.push({ id: 'tipping', label: 'Tipping', render: () => <MatchPredictions match={match} compact /> });
-  }
-  if (hasMatchEvents(match)) {
-    tabs.push({ id: 'events', label: 'Dystarstøður', render: () => <MatchEvents match={match} /> });
-  }
+  if (matchEditable(match, now)) tabs.push({ id: 'tipping', label: 'Tipping' });
+  if (hasMatchEvents(match)) tabs.push({ id: 'events', label: 'Dystarstøður' });
+  if (match.feat?.commentary) tabs.push({ id: 'commentary', label: 'Frásøgn' });
+  if (match.feat?.lineups) tabs.push({ id: 'lineups', label: 'Liðini' });
+  if (match.feat?.stats) tabs.push({ id: 'stats', label: 'Hagtøl' });
+
+  const activeTab = active ? tabs.find((t) => t.id === active) : null;
+  const needDetail = !!activeTab && DETAIL_TABS.has(activeTab.id);
+  const { detail, loading } = useMatchDetail(match.id, needDetail);
 
   if (!tabs.length) return null;
-  const activeTab = active ? tabs.find((t) => t.id === active) : null;
+
+  function panel() {
+    if (!activeTab) return null;
+    switch (activeTab.id) {
+      case 'tipping': return <MatchPredictions match={match} compact />;
+      case 'events': return <MatchEvents match={match} />;
+      case 'commentary': return detail ? <MatchCommentary commentary={detail.commentary} /> : <Loading loading={loading} />;
+      case 'lineups': return detail ? <MatchLineups lineups={detail.lineups} match={match} /> : <Loading loading={loading} />;
+      case 'stats': return detail ? <MatchStats stats={detail.stats} /> : <Loading loading={loading} />;
+      default: return null;
+    }
+  }
 
   return (
     <div className="match-tabs">
@@ -43,7 +66,7 @@ export default function MatchTabs({ match, yourPick, yourPoints, scoreText }) {
           </button>
         ))}
       </div>
-      {activeTab && <div className="match-tabpanel" role="tabpanel">{activeTab.render()}</div>}
+      {activeTab && <div className="match-tabpanel" role="tabpanel">{panel()}</div>}
     </div>
   );
 }

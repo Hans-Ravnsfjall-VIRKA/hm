@@ -119,3 +119,24 @@ export function TournamentProvider({ children }) {
   const value = useTournament();
   return <TournamentCtx.Provider value={value}>{children}</TournamentCtx.Provider>;
 }
+
+/**
+ * Lazy detail (stats / line-ups / commentary) for one match, loaded only when
+ * a relevant tab is opened. Subscribes while enabled so live stats refresh,
+ * and unsubscribes when the tab closes.
+ */
+export function useMatchDetail(matchId, enabled) {
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!enabled || !matchId) return undefined;
+    setLoading(true);
+    const unsub = onSnapshot(
+      doc(db, 'details', matchId),
+      (snap) => { setDetail(snap.exists() ? snap.data() : null); setLoading(false); },
+      () => setLoading(false),
+    );
+    return unsub;
+  }, [matchId, enabled]);
+  return { detail, loading };
+}

@@ -77,21 +77,116 @@ function espnKeyEvents(data, homeId, awayId) {
   return out;
 }
 
-async function espnSummaryEvents(id, homeId, awayId) {
-  if (!id) return [];
+// Curated team stats, in display order, with Faroese labels.
+// FLAGGED: Faroese labels need native-speaker review.
+const STAT_DEFS = [
+  ['possessionPct', 'Boltahald', '%'],
+  ['totalShots', 'Skot', ''],
+  ['shotsOnTarget', 'Skot á mál', ''],
+  ['wonCorners', 'Hornspark', ''],
+  ['foulsCommitted', 'Reglubrot', ''],
+  ['offsides', 'Útistøður', ''],
+  ['saves', 'Bjargingar', ''],
+  ['passPct', 'Sendingar', '%'],
+];
+
+function espnStats(data, homeId, awayId) {
+  const teams = Array.isArray(data?.boxscore?.teams) ? data.boxscore.teams : [];
+  const find = (id) => teams.find((t) => String(t.team?.id) === String(id));
+  const ht = find(homeId), at = find(awayId);
+  if (!ht || !at) return [];
+  const map = (t) => {
+    const m = {};
+    for (const s of (t.statistics || [])) if (s?.name) m[s.name] = s.displayValue;
+    return m;
+  };
+  const H = map(ht), A = map(at);
+  const out = [];
+  for (const [name, label, suffix] of STAT_DEFS) {
+    if (H[name] == null && A[name] == null) continue;
+    out.push({ label, suffix, home: H[name] ?? '0', away: A[name] ?? '0' });
+  }
+  return out;
+}
+
+function espnLineups(data, homeId, awayId) {
+  const rosters = Array.isArray(data?.rosters) ? data.rosters : [];
+  const find = (id) => rosters.find((r) => String(r.team?.id) === String(id));
+  const build = (r) => {
+    if (!r || !Array.isArray(r.roster) || !r.roster.length) return null;
+    const players = r.roster.map((p) => ({
+      name: p.athlete?.displayName || p.athlete?.shortName || '',
+      jersey: String(p.jersey ?? p.athlete?.jersey ?? ''),
+      pos: p.position?.abbreviation || '',
+      starter: p.starter === true,
+      place: p.formationPlace != null && p.formationPlace !== '' ? Number(p.formationPlace) : null,
+    })).filter((p) => p.name);
+    return {
+      formation: r.formation?.name || r.formation || null,
+      starters: players.filter((p) => p.starter),
+      subs: players.filter((p) => !p.starter),
+    };
+  };
+  const home = build(find(homeId));
+  const away = build(find(awayId));
+  if (!home && !away) return null;
+  return { home, away };
+}
+
+function espnCommentary(data) {
+  const c = Array.isArray(data?.commentary) ? data.commentary : [];
+  const out = c.map((d) => ({
+    m: d.time?.displayValue || '',
+    text: (d.text || '').trim(),
+    seq: d.sequence != null ? Number(d.sequence) : 0,
+  })).filter((x) => x.text);
+  out.sort((a, b) => b.seq - a.seq); // newest first
+  return out;
+}
+
+// One ESPN summary fetch, returning everything we surface in the match tabs.
+async function espnSummary(id, homeId, awayId) {
+  if (!id) return null;
   const url = `https://site.web.api.espn.com/apis/site/v2/sports/soccer/${ESPN_LEAGUE}/summary?event=${id}&region=us&lang=en&contentorigin=espn`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 9000);
   try {
     const res = await fetch(url, { headers: { accept: 'application/json' }, signal: ctrl.signal });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const data = await res.json();
-    return espnKeyEvents(data, homeId, awayId);
+    return {
+      events: espnKeyEvents(data, homeId, awayId),
+      stats: espnStats(data, homeId, awayId),
+      lineups: espnLineups(data, homeId, awayId),
+      commentary: espnCommentary(data),
+    };
   } catch {
-    return [];
+    return null;
   } finally {
     clearTimeout(t);
   }
+}
+
+// Build the heavy detail payload + the small availability flags for a match.
+function applySummary(id, sum, update, detailOps, lsHasEvents) {
+  if (!sum) return;
+  if (!lsHasEvents && sum.events.length) {
+    update.events = sum.events;
+    if (update.finished) update.evFix = EV_FIX;
+  }
+  const detail = {};
+  if (sum.stats.length) detail.stats = sum.stats;
+  if (sum.lineups) detail.lineups = sum.lineups;
+  if (sum.commentary.length) detail.commentary = sum.commentary;
+  if (Object.keys(detail).length) {
+    detailOps.push({ id, detail });
+    update.feat = { stats: !!detail.stats, lineups: !!detail.lineups, commentary: !!detail.commentary };
+  }
+}
+
+async function espnSummaryEvents(id, homeId, awayId) {
+  const sum = await espnSummary(id, homeId, awayId);
+  return sum ? sum.events : [];
 }
 
 function initFirebase() {
@@ -181,6 +276,7 @@ async function syncOnce(cache = null) {
   // 3) Join + build minimal updates (status/score only), skipping no-ops.
   const STALE_MS = 3.5 * 60 * 60 * 1000; // a match is always over within 3.5h of kickoff
   const ops = [];
+  const detailOps = []; // heavy per-match detail (stats/lineups/commentary) -> details/{id}
   const covered = new Set(); // fixture ids the feed returned this run
   let matched = 0; let unmatched = 0;
   for (const r of updates) {
@@ -248,20 +344,21 @@ async function syncOnce(cache = null) {
       update.events = newEvents;
     }
 
-    // Fallback: live-score-api carries no events for these matches, so pull
-    // goals + cards from ESPN's summary (our id is the ESPN event id). Do it
-    // every sync while a match is LIVE (new goals show within a poll), and for
-    // a FINISHED match until it's stamped with the current parser version
-    // (one-time re-correction of older docs); after that it settles into a no-op.
+    // Pull match detail from ESPN's summary (our id is the ESPN event id):
+    // events (live-score-api carries none for these matches) plus stats,
+    // line-ups and commentary for the tabs. Fetch while LIVE (refresh each
+    // poll), for a FINISHED match until stamped with the current version, and
+    // pre-match until line-ups appear (they post ~1h before kickoff).
     const lsHasEvents = Array.isArray(newEvents) && newEvents.length > 0;
     const needEvBackfill = update.finished && ex.evFix !== EV_FIX;
-    if (!lsHasEvents && (update.live || needEvBackfill)) {
-      const espnEvents = await espnSummaryEvents(ex.id, ex.homeTeam?.id, ex.awayTeam?.id);
-      if (espnEvents.length) {
-        newEvents = espnEvents;
-        update.events = newEvents;
-        if (update.finished) update.evFix = EV_FIX;
-        console.log(`  events via ESPN ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${espnEvents.length} live=${!!update.live} (id ${ex.id})`);
+    const tMinus = ex.kickoff ? ex.kickoff - Date.now() : Infinity;
+    const wantLineups = tMinus > 0 && tMinus <= 2 * 3600 * 1000 && !ex.feat?.lineups;
+    if (update.live || needEvBackfill || wantLineups) {
+      const sum = await espnSummary(ex.id, ex.homeTeam?.id, ex.awayTeam?.id);
+      if (sum) {
+        applySummary(ex.id, sum, update, detailOps, lsHasEvents);
+        if (update.events) newEvents = update.events;
+        console.log(`  detail via ESPN ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ev=${sum.events.length} stats=${sum.stats.length} lineups=${!!sum.lineups} comm=${sum.commentary.length} (id ${ex.id})`);
       }
     }
     const redCount = newEvents ? newEvents.filter((e) => e.t === 'red').length : 0;
@@ -270,8 +367,9 @@ async function syncOnce(cache = null) {
     const sameEvents = !newEvents || JSON.stringify(ex.events || null) === JSON.stringify(newEvents);
     const sameClock = !('clock' in update) || (ex.clock || null) === (update.clock || null);
     const sameEvFix = !('evFix' in update) || ex.evFix === update.evFix;
+    const sameFeat = !('feat' in update) || JSON.stringify(ex.feat || null) === JSON.stringify(update.feat);
     const noop = ex.status === update.status && ex.live === update.live
-      && ex.finished === update.finished && sameResult && sameEvents && sameClock && sameEvFix;
+      && ex.finished === update.finished && sameResult && sameEvents && sameClock && sameEvFix && sameFeat;
     if (noop) continue;
 
     if (DRY) {
@@ -297,16 +395,18 @@ async function syncOnce(cache = null) {
 
   // Re-correct finished matches that have dropped out of the live-score-api
   // feed but still carry an older event format (e.g. the own-goal fix). Pull
-  // their events straight from ESPN by id; once stamped they settle.
+  // their full detail straight from ESPN by id; once stamped they settle.
   for (const m of existing) {
     if (covered.has(m.id) || !m.finished || m.evFix === EV_FIX) continue;
-    const espnEvents = await espnSummaryEvents(m.id, m.homeTeam?.id, m.awayTeam?.id);
-    if (!espnEvents.length) continue;
-    if (DRY) console.log(`  RECORRECT ${m.homeTeam?.name} v ${m.awayTeam?.name}: ${espnEvents.length} ev (id ${m.id})`);
-    else ops.push({ id: m.id, update: { events: espnEvents, evFix: EV_FIX } });
+    const sum = await espnSummary(m.id, m.homeTeam?.id, m.awayTeam?.id);
+    if (!sum || !sum.events.length) continue;
+    const update = { evFix: EV_FIX };
+    applySummary(m.id, sum, update, detailOps, false);
+    if (DRY) console.log(`  RECORRECT ${m.homeTeam?.name} v ${m.awayTeam?.name}: ${sum.events.length} ev (id ${m.id})`);
+    else ops.push({ id: m.id, update });
   }
 
-  console.log(`${PROVIDER_NAME}: matched=${matched} unmatched=${unmatched} changes=${DRY ? '(dry)' : ops.length}`);
+  console.log(`${PROVIDER_NAME}: matched=${matched} unmatched=${unmatched} changes=${DRY ? '(dry)' : ops.length} detail=${DRY ? '(dry)' : detailOps.length}`);
   if (DRY) { console.log('DRY RUN complete - nothing written.'); return { live: updates.some((u) => u.live), matches: existing }; }
 
   // 4) Write only changed matches. Merge-only, existing ids only.
@@ -314,6 +414,14 @@ async function syncOnce(cache = null) {
     const batch = db.batch();
     for (const op of ops.slice(i, i + 400)) {
       batch.set(db.collection('matches').doc(op.id), op.update, { merge: true });
+    }
+    await batch.commit();
+  }
+  // Heavy per-match detail goes to its own collection, loaded on demand.
+  for (let i = 0; i < detailOps.length; i += 400) {
+    const batch = db.batch();
+    for (const op of detailOps.slice(i, i + 400)) {
+      batch.set(db.collection('details').doc(op.id), op.detail, { merge: true });
     }
     await batch.commit();
   }
