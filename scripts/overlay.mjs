@@ -44,8 +44,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
 // Bump when the parser/detail changes in a way that should re-pull already
 // stored finished matches once. v4 adds stats/line-ups/commentary detail;
-// v5 relabels a stat (fouls); v6 relabels possession + offsides.
-const EV_FIX = 6;
+// v5 relabels a stat (fouls); v6 relabels possession + offsides; v7 pass %.
+const EV_FIX = 7;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
@@ -87,7 +87,7 @@ const STAT_DEFS = [
   ['foulsCommitted', 'Gjørd fríspørk', ''],
   ['offsides', 'Rangstøður', ''],
   ['saves', 'Bjargingar', ''],
-  ['passPct', 'Sendingar', '%'],
+  ['passPct', 'Sendingar, % rættar', '%'],
 ];
 
 function espnStats(data, homeId, awayId) {
