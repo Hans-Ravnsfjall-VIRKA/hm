@@ -81,7 +81,7 @@ function Bench({ team, marks }) {
   if (!subs.length) return null;
   return (
     <div className="lu-bench">
-      <div className="lu-bench-title">Skiftarar</div>
+      <div className="lu-bench-title">Á bonkinum</div>
       <div className="lu-bench-list">
         {subs.map((p, i) => (
           <span className="lu-bench-row" key={i}>

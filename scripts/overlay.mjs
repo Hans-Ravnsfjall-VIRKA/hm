@@ -43,8 +43,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // is over, and orientation matches our stored home/away). Public, no key.
 const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
 // Bump when the parser/detail changes in a way that should re-pull already
-// stored finished matches once. v4 adds stats/line-ups/commentary detail.
-const EV_FIX = 4;
+// stored finished matches once. v4 adds stats/line-ups/commentary detail;
+// v5 relabels a stat (fouls).
+const EV_FIX = 5;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
@@ -83,7 +84,7 @@ const STAT_DEFS = [
   ['totalShots', 'Skot', ''],
   ['shotsOnTarget', 'Skot á mál', ''],
   ['wonCorners', 'Hornspark', ''],
-  ['foulsCommitted', 'Reglubrot', ''],
+  ['foulsCommitted', 'Gjørd fríspørk', ''],
   ['offsides', 'Útistøður', ''],
   ['saves', 'Bjargingar', ''],
   ['passPct', 'Sendingar', '%'],
