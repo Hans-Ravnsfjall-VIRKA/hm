@@ -529,6 +529,26 @@ body { font-size: 1.0625rem; }
   border-radius: var(--r-xl); box-shadow: var(--shadow); overflow: hidden;
 }
 .match-card .match { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
+/* Livescore-style tab strip beneath a match. */
+.match-tabs { border-top: 1px solid var(--hairline-2); }
+.match-tabstrip {
+  display: flex; gap: 4px; padding: 4px 10px 0; overflow-x: auto; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.match-tabstrip::-webkit-scrollbar { display: none; }
+.match-tab {
+  flex: none; appearance: none; background: transparent; border: 0; cursor: pointer;
+  padding: 11px 8px 10px; margin: 0; font-family: var(--font-body); font-size: 0.875rem;
+  font-weight: 600; letter-spacing: -0.01em; color: var(--text-3); white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.match-tab:hover { color: var(--text-2); }
+.match-tab.active { color: var(--text-1); border-bottom-color: var(--accent); }
+.match-tabpanel { padding: 4px 16px 16px; animation: fade 0.25s var(--ease); }
+.match-tabpanel .events { margin-top: 0; padding-top: 0; border-top: 0; }
+.match-tabpanel .predict-list-row { box-shadow: none; background: var(--bg-2); border-color: transparent; }
+.match-tabpanel .predict-list-row.me { background: linear-gradient(var(--accent-soft), transparent), var(--bg-2); }
+.match-tabpanel .empty { padding: 18px 8px; }
 .match-card .disclosure {
   margin-top: 0; background: transparent; border: 0; border-radius: 0;
   box-shadow: none; border-top: 1px solid var(--hairline-2);
