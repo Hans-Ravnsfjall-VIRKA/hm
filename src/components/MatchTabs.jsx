@@ -5,8 +5,7 @@ import MatchStats from './MatchStats';
 import MatchLineups from './MatchLineups';
 import MatchCommentary from './MatchCommentary';
 import { hasMatchEvents } from './Disclosure';
-import { matchEditable } from '../lib/tournament';
-import { useTournamentCtx, useMatchDetail } from '../hooks/useData';
+import { useMatchDetail } from '../hooks/useData';
 
 // Livescore-style tab strip beneath a match. Tabs appear only when they have
 // something to show and all available ones sit side-by-side. Nothing is open
@@ -22,11 +21,10 @@ function Loading({ loading }) {
 }
 
 export default function MatchTabs({ match }) {
-  const { now } = useTournamentCtx();
   const [active, setActive] = useState(null);
 
   const tabs = [];
-  if (matchEditable(match, now)) tabs.push({ id: 'tipping', label: 'Tipping' });
+  tabs.push({ id: 'tipping', label: 'Tipping' });
   if (hasMatchEvents(match)) tabs.push({ id: 'events', label: 'Dystarstøður' });
   if (match.feat?.commentary) tabs.push({ id: 'commentary', label: 'Frásøgn' });
   if (match.feat?.lineups) tabs.push({ id: 'lineups', label: 'Liðini' });

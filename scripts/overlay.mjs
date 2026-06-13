@@ -42,10 +42,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // goals + red cards straight from ESPN's match summary (reliable once a game
 // is over, and orientation matches our stored home/away). Public, no key.
 const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
-// Bump when the event parser changes in a way that should re-correct already
-// stored finished matches once (e.g. own-goal side fix). Finished matches are
-// re-pulled from ESPN until stamped with the current version, then settle.
-const EV_FIX = 3;
+// Bump when the parser/detail changes in a way that should re-pull already
+// stored finished matches once. v4 adds stats/line-ups/commentary detail.
+const EV_FIX = 4;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
