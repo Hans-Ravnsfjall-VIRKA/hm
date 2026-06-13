@@ -42,7 +42,7 @@ export default function MatchPredictions({ match, compact = false }) {
       )}
 
       {!revealed && (
-        <div className="lock-note" style={{ marginBottom: 12 }}>
+        <div className="lock-note">
           Tippingar hjá øllum verða vístar 1 tíma áðrenn dysturin byrjar
         </div>
       )}

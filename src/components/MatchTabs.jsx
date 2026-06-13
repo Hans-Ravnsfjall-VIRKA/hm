@@ -50,7 +50,7 @@ export default function MatchTabs({ match }) {
 
   return (
     <div className="match-tabs">
-      <div className="match-tabstrip" role="tablist">
+      <div className={`match-tabstrip ${tabs.length >= 3 ? 'spread' : ''}`} role="tablist">
         {tabs.map((t) => (
           <button
             key={t.id}

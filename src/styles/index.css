@@ -536,6 +536,11 @@ body { font-size: 1.0625rem; }
   -webkit-overflow-scrolling: touch;
 }
 .match-tabstrip::-webkit-scrollbar { display: none; }
+.match-tabstrip.spread { justify-content: space-between; }
+.match-tabpanel .lock-note {
+  background: transparent; border: 0; padding: 0; margin: 0 0 10px;
+  color: var(--text-3); font-size: 0.8125rem; line-height: 1.4;
+}
 .match-tab {
   flex: none; appearance: none; background: transparent; border: 0; cursor: pointer;
   padding: 11px 8px 10px; margin: 0; font-family: var(--font-body); font-size: 0.875rem;
@@ -563,10 +568,13 @@ body { font-size: 1.0625rem; }
 
 /* Frásøgn - commentary feed */
 .mcomm { display: flex; flex-direction: column; }
-.mcomm-row { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--hairline); }
+.mcomm-row { display: flex; gap: 8px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--hairline); }
 .mcomm-row:first-child { border-top: 0; }
-.mcomm-min { flex: none; width: 2.6rem; color: var(--accent); font-size: 0.8125rem; font-weight: 700; }
+.mcomm-min { flex: none; width: 2.4rem; color: var(--accent); font-size: 0.8125rem; font-weight: 700; padding-top: 1px; }
+.mcomm-ico { flex: none; width: 16px; display: flex; justify-content: center; align-items: flex-start; padding-top: 1px; color: var(--text-3); }
+.mcomm-ico .ci { display: block; }
 .mcomm-text { flex: 1; font-size: 0.875rem; line-height: 1.45; color: var(--text-2); }
+.mcomm-row.key .mcomm-text { color: var(--text-1); }
 
 /* Liðini - line-ups */
 .lineups { display: flex; flex-direction: column; gap: 14px; }
