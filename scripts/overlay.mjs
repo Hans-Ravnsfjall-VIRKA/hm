@@ -44,8 +44,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
 // Bump when the parser/detail changes in a way that should re-pull already
 // stored finished matches once. v4 adds stats/line-ups/commentary detail;
-// v5 relabels a stat (fouls).
-const EV_FIX = 5;
+// v5 relabels a stat (fouls); v6 relabels possession + offsides.
+const EV_FIX = 6;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
@@ -80,12 +80,12 @@ function espnKeyEvents(data, homeId, awayId) {
 // Curated team stats, in display order, with Faroese labels.
 // FLAGGED: Faroese labels need native-speaker review.
 const STAT_DEFS = [
-  ['possessionPct', 'Boltahald', '%'],
+  ['possessionPct', 'Havt bóltin', '%'],
   ['totalShots', 'Skot', ''],
   ['shotsOnTarget', 'Skot á mál', ''],
   ['wonCorners', 'Hornspark', ''],
   ['foulsCommitted', 'Gjørd fríspørk', ''],
-  ['offsides', 'Útistøður', ''],
+  ['offsides', 'Rangstøður', ''],
   ['saves', 'Bjargingar', ''],
   ['passPct', 'Sendingar', '%'],
 ];
