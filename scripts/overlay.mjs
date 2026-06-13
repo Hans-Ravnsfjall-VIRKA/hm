@@ -42,6 +42,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // goals + red cards straight from ESPN's match summary (reliable once a game
 // is over, and orientation matches our stored home/away). Public, no key.
 const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
+// Bump when the event parser changes in a way that should re-correct already
+// stored finished matches once (e.g. own-goal side fix). Finished matches are
+// re-pulled from ESPN until stamped with the current version, then settle.
+const EV_FIX = 2;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
@@ -52,9 +56,13 @@ function espnKeyEvents(data, homeId, awayId) {
     const isRed = d.redCard === true || text.includes('red card');
     const isYellow = !isRed && (d.yellowCard === true || text.includes('yellow'));
     if (!isGoal && !isRed && !isYellow) continue;
+    const og = d.ownGoal === true || text.includes('own goal');
     const tid = d.team?.id ?? null;
-    const side = tid != null && String(tid) === String(homeId) ? 'home'
+    let side = tid != null && String(tid) === String(homeId) ? 'home'
       : (tid != null && String(tid) === String(awayId) ? 'away' : null);
+    // ESPN tags an own goal with the scoring player's own team, but the goal
+    // counts for the opponent, so flip the side it's credited to.
+    if (isGoal && og && side) side = side === 'home' ? 'away' : 'home';
     const ath = d.participants?.[0]?.athlete || d.athletesInvolved?.[0];
     const player = ath?.displayName || ath?.shortName || null;
     const disp = d.clock?.displayValue || null;
@@ -64,7 +72,7 @@ function espnKeyEvents(data, homeId, awayId) {
       min: parseInt(disp || '0', 10) || 0,
       side,
       player,
-      og: d.ownGoal === true || text.includes('own goal'),
+      og,
       pen: d.penaltyKick === true || text.includes('penalty'),
     });
   }
@@ -246,15 +254,16 @@ async function syncOnce(cache = null) {
     // Fallback: live-score-api carries no events for these matches, so pull
     // goals + cards from ESPN's summary (our id is the ESPN event id). Do it
     // every sync while a match is LIVE (new goals show within a poll), and for
-    // a FINISHED match until the backfill has a yellow card on it; after that
-    // it settles into a no-op.
+    // a FINISHED match until it's stamped with the current parser version
+    // (one-time re-correction of older docs); after that it settles into a no-op.
     const lsHasEvents = Array.isArray(newEvents) && newEvents.length > 0;
-    const docHasYellow = Array.isArray(ex.events) && ex.events.some((e) => e.t === 'yellow');
-    if (!lsHasEvents && (update.live || (update.finished && !docHasYellow))) {
+    const needEvBackfill = update.finished && ex.evFix !== EV_FIX;
+    if (!lsHasEvents && (update.live || needEvBackfill)) {
       const espnEvents = await espnSummaryEvents(ex.id, ex.homeTeam?.id, ex.awayTeam?.id);
       if (espnEvents.length) {
         newEvents = espnEvents;
         update.events = newEvents;
+        if (update.finished) update.evFix = EV_FIX;
         console.log(`  events via ESPN ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ${espnEvents.length} live=${!!update.live} (id ${ex.id})`);
       }
     }
@@ -263,8 +272,9 @@ async function syncOnce(cache = null) {
     const sameResult = JSON.stringify(ex.result || null) === JSON.stringify(update.result || ex.result || null);
     const sameEvents = !newEvents || JSON.stringify(ex.events || null) === JSON.stringify(newEvents);
     const sameClock = !('clock' in update) || (ex.clock || null) === (update.clock || null);
+    const sameEvFix = !('evFix' in update) || ex.evFix === update.evFix;
     const noop = ex.status === update.status && ex.live === update.live
-      && ex.finished === update.finished && sameResult && sameEvents && sameClock;
+      && ex.finished === update.finished && sameResult && sameEvents && sameClock && sameEvFix;
     if (noop) continue;
 
     if (DRY) {
