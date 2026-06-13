@@ -44,8 +44,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ESPN_LEAGUE = process.env.ESPN_LEAGUE || 'fifa.world';
 // Bump when the parser/detail changes in a way that should re-pull already
 // stored finished matches once. v4 adds stats/line-ups/commentary detail;
-// v5 relabels a stat (fouls); v6 relabels possession + offsides; v7 pass %.
-const EV_FIX = 7;
+// v5 relabels a stat (fouls); v6 relabels possession + offsides; v7 pass %;
+// v8 adds Faroese commentary templates; v9 finalises template wording.
+const EV_FIX = 9;
 
 function espnKeyEvents(data, homeId, awayId) {
   const ke = Array.isArray(data?.keyEvents) ? data.keyEvents : [];
@@ -133,13 +134,52 @@ function espnLineups(data, homeId, awayId) {
   return { home, away };
 }
 
+// =====================================================================
+// Faroese commentary templates.  FLAGGED: all Faroese below needs native
+// review - edit freely, this block is the single source of truth. Only the
+// fully-structured ESPN lines are translated (whole line, never half); player
+// names, team names, scores and times pass through unchanged. Anything that
+// doesn't match a rule stays in English.
+// =====================================================================
+function translateCommentary(text) {
+  const t = String(text || '').trim();
+  if (!t) return null;
+  const rules = [
+    [/^kick-?off\.?$/i, () => 'Dysturin er bríkslaður í gongd.'],
+    [/^first half begins\.?$/i, () => 'Fyrri hálvleikur er byrjaður.'],
+    [/^second half begins.*$/i, () => 'Seinni hálvleikur er byrjaður.'],
+    [/^first half ends[,.]?\s*(.+?)\.?$/i, (m) => `Fyrri hálvleikur endar, ${m[1]}.`],
+    [/^second half ends[,.]?\s*(.+?)\.?$/i, (m) => `Seinni hálvleikur endar, ${m[1]}.`],
+    [/^match ends[,.]?\s*(.+?)\.?$/i, (m) => `Dysturin endar, ${m[1]}.`],
+    [/^substitution,\s*(.+?)\.\s*(.+?) replaces (.+?)\.?$/i, (m) => `Útskifting hjá ${m[1]}. ${m[2]} kemur inn fyri ${m[3]}.`],
+    [/^second yellow card to (.+?\([^)]*\)).*$/i, (m) => `${m[1]} fær sítt annað gula kort.`],
+    [/^(.+?) is shown (?:the|a) yellow card.*$/i, (m) => `${m[1]} fær gult kort.`],
+    [/^(.+?) is shown (?:the|a) red card.*$/i, (m) => `${m[1]} fær reytt kort.`],
+    [/^foul by (.+?)\.?$/i, (m) => `${m[1]} ger fríspark.`],
+    [/^hand ball by (.+?)\.?$/i, (m) => `${m[1]} hevur hond á bóltinum.`],
+    [/^corner,\s*(.+?)\.\s*conceded by (.+?)\.?$/i, (m) => `Hornaspark til ${m[1]}. Seinast nomið við ${m[2]}.`],
+    [/^corner,\s*(.+?)\.?$/i, (m) => `Hornaspark til ${m[1]}.`],
+    [/^delay over\b.*$/i, () => 'Steðgurin er av. Klárt er at halda fram.'],
+    [/^delay in match\s*(.+?)\.?$/i, (m) => `Steðgur í dystinum – ${m[1]}.`],
+  ];
+  for (const [re, fn] of rules) {
+    const m = t.match(re);
+    if (m) return fn(m);
+  }
+  return null;
+}
+
 function espnCommentary(data) {
   const c = Array.isArray(data?.commentary) ? data.commentary : [];
-  const out = c.map((d) => ({
-    m: d.time?.displayValue || '',
-    text: (d.text || '').trim(),
-    seq: d.sequence != null ? Number(d.sequence) : 0,
-  })).filter((x) => x.text);
+  const out = c.map((d) => {
+    const text = (d.text || '').trim();
+    return {
+      m: d.time?.displayValue || '',
+      text,
+      fo: translateCommentary(text),
+      seq: d.sequence != null ? Number(d.sequence) : 0,
+    };
+  }).filter((x) => x.text);
   out.sort((a, b) => b.seq - a.seq); // newest first
   return out;
 }

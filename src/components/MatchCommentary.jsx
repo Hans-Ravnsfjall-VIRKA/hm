@@ -106,7 +106,7 @@ export default function MatchCommentary({ commentary }) {
           <div className={`mcomm-row ${type ? 'key' : ''}`} key={i}>
             <span className="mcomm-min mono">{c.m || ''}</span>
             <span className="mcomm-ico">{type ? <CommentaryIcon type={type} /> : null}</span>
-            <span className="mcomm-text">{c.text}</span>
+            <span className="mcomm-text">{c.fo || c.text}</span>
           </div>
         );
       })}
