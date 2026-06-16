@@ -16,9 +16,9 @@ export default function Rules() {
             <tbody>
               <tr><td className="pp">0</td><td>Skeivt úrslit (skeivur vinnari ella skeivur javnleikur).</td></tr>
               <tr><td className="pp">3</td><td>Rætt úrslit: rættur vinnari, ella rættur javnleikur.</td></tr>
-              <tr><td className="pp">4</td><td>Rætt úrslit og mál hjá einum liðinum eru rætt.</td></tr>
-              <tr><td className="pp">6</td><td>Rætt úrslit: bæði tøl eru rætt.</td></tr>
-              <tr><td className="pp">+1</td><td>Fyri hvørt mál meir enn 4 í einum rættum úrsliti.</td></tr>
+              <tr><td className="pp">4</td><td>Rætt úrslit og mál hjá einum liðinum eru røtt.</td></tr>
+              <tr><td className="pp">6</td><td>Rætt úrslit: bæði tøl eru røtt.</td></tr>
+              <tr><td className="pp">+1</td><td>Fyri hvørt mál meir enn 4 í einum røttum úrsliti.</td></tr>
             </tbody>
           </table>
           <p style={{ marginTop: 10 }}>
