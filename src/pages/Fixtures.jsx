@@ -14,6 +14,7 @@ export default function Fixtures() {
   const available = stages.filter((s) => s.count > 0);
   const [stageId, setStageId] = useState('group');
   const [view, setView] = useState('matches');
+  const [showAll, setShowAll] = useState(false);
   const stage = available.find((s) => s.id === stageId) || available[0];
 
   if (!loaded) return <div className="spinner" />;
@@ -27,11 +28,13 @@ export default function Fixtures() {
     );
   }
 
+  const shownMatches = showAll ? stage.matches : stage.matches.filter((m) => !m.finished);
   const byDay = {};
-  for (const m of stage.matches) {
+  for (const m of shownMatches) {
     const key = m.kickoff ? foDayShort(m.kickoff) : 'Óvist';
     (byDay[key] ||= []).push(m);
   }
+  const dayEntries = Object.entries(byDay);
 
   return (
     <>
@@ -53,9 +56,22 @@ export default function Fixtures() {
         </div>
       )}
 
+      {view === 'matches' && (
+        <div className="seg">
+          <button className={!showAll ? 'active' : ''} onClick={() => setShowAll(false)}>Komandi dystir</button>
+          <button className={showAll ? 'active' : ''} onClick={() => setShowAll(true)}>Vís allar dystir</button>
+        </div>
+      )}
+
       {view === 'standings'
         ? <Standings groups={standings} />
-        : Object.entries(byDay).map(([day, ms]) => (
+        : dayEntries.length === 0
+          ? (
+            <p className="muted center-text" style={{ marginTop: 16, fontSize: '0.875rem' }}>
+              Ongir komandi dystir í hesum umfari.
+            </p>
+          )
+          : dayEntries.map(([day, ms]) => (
             <div key={day}>
               <div className="day-label">{day}</div>
               <div className="stack">

@@ -19,6 +19,7 @@ export default function Predict() {
   const savePicks = useSavePicks();
   const [confirm, setConfirm] = useState(false);
   const [filling, setFilling] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const dialogRef = useRef(null);
   const confirmBtnRef = useRef(null);
   const prevFocusRef = useRef(null);
@@ -100,10 +101,17 @@ export default function Predict() {
         </button>
       )}
 
+      {tippable.length > 0 && (
+        <div className="seg" style={{ marginBottom: 16 }}>
+          <button className={!showAll ? 'active' : ''} onClick={() => setShowAll(false)}>Komandi dystir</button>
+          <button className={showAll ? 'active' : ''} onClick={() => setShowAll(true)}>Vís allar dystir</button>
+        </div>
+      )}
+
       {tippable.length === 0 && <NothingOpen stages={stages} />}
 
       {tippable.map((stage) => (
-        <StagePredictor key={stage.id} stage={stage} savedPicks={savedPicks} now={now} savePicks={savePicks} />
+        <StagePredictor key={stage.id} stage={stage} savedPicks={savedPicks} now={now} savePicks={savePicks} showAll={showAll} />
       ))}
 
       {tippable.length > 0 && <UpcomingHint stages={stages} />}
@@ -128,7 +136,7 @@ export default function Predict() {
   );
 }
 
-function StagePredictor({ stage, savedPicks, now, savePicks }) {
+function StagePredictor({ stage, savedPicks, now, savePicks, showAll }) {
   const [picks, setPicks] = useState({});
   const [busy, setBusy] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -179,11 +187,15 @@ function StagePredictor({ stage, savedPicks, now, savePicks }) {
 
   const done = stage.matches.filter((m) => complete(picks[m.id])).length;
   const all = stage.matches.length;
+  const shown = showAll ? stage.matches : stage.matches.filter((m) => !m.finished);
   const remaining = timeUntil(stage.firstKickoff, now);
   const savedAll = stage.matches.every((m) => {
     const p = picks[m.id]; const s = savedPicks[m.id];
     return complete(p) && s && s.h === p.h && s.a === p.a;
   });
+
+  // A fully-played stage has nothing upcoming; hide it in the default view.
+  if (!showAll && shown.length === 0) return null;
 
   return (
     <section style={{ marginBottom: 28 }}>
@@ -212,7 +224,7 @@ function StagePredictor({ stage, savedPicks, now, savePicks }) {
       )}
 
       <div className="stack">
-        {stage.matches.map((m) => {
+        {shown.map((m) => {
           const p = picks[m.id] || { h: null, a: null };
           const editable = canEditMatch(m);
           const saved = savedPicks[m.id];
