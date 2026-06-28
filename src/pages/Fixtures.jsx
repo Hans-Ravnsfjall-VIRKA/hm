@@ -12,10 +12,16 @@ export default function Fixtures() {
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
 
   const available = stages.filter((s) => s.count > 0);
-  const [stageId, setStageId] = useState('group');
+  const [stageId, setStageId] = useState(null);
   const [view, setView] = useState('matches');
   const [showAll, setShowAll] = useState(false);
-  const stage = available.find((s) => s.id === stageId) || available[0];
+  // Until the user picks a stage, land on the earliest stage that still has an
+  // unplayed match (the current round) so "Komandi dystir" shows the upcoming
+  // matches rather than an already-finished group stage. Falls back to the most
+  // recent stage when everything is played.
+  const defaultStage = available.find((s) => s.matches.some((m) => !m.finished))
+    || available[available.length - 1];
+  const stage = available.find((s) => s.id === stageId) || defaultStage || available[0];
 
   if (!loaded) return <div className="spinner" />;
   if (!available.length) {
