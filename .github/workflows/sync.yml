@@ -47,3 +47,12 @@ jobs:
           LIVESCORE_API_KEY: ${{ secrets.LIVESCORE_API_KEY }}
           LIVESCORE_API_SECRET: ${{ secrets.LIVESCORE_API_SECRET }}
         run: npm run overlay
+
+      - name: Auto-fill missing predictions at round deadlines
+        # When a round's first match kicks off, top up every player's blank
+        # matches in that round so nobody is locked out. Cheap: skips until a
+        # deadline is actually due. Never blocks the steps above.
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: npm run autofill

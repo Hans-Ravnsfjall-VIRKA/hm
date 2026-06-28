@@ -11,7 +11,9 @@
     "sync": "node scripts/sync.mjs",
     "seed": "node --env-file=.env.local scripts/sync.mjs",
     "overlay": "node scripts/overlay.mjs",
-    "overlay:local": "node --env-file=.env.local scripts/overlay.mjs"
+    "overlay:local": "node --env-file=.env.local scripts/overlay.mjs",
+    "autofill": "node scripts/autofill.mjs",
+    "autofill:local": "node --env-file=.env.local scripts/autofill.mjs"
   },
   "dependencies": {
     "firebase": "^10.12.2",

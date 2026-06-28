@@ -65,7 +65,15 @@ function parseClock(time, st) {
 // `scheduled` time but no date field.
 function toRecord(m, fallbackDay) {
   const st = mapStatus(m.status, m.time);
-  const score = parseScore(m.scores?.score) || parseScore(m.scores?.ft_score);
+  // The score we store is the 90-minute (regulation) score - never extra time
+  // or penalties - because that is what players predict. live-score-api keeps
+  // these separate: `ft_score` is the score after 90 minutes, while `score`
+  // (and et_score / ps_score) include extra time and the shootout. For a
+  // FINISHED match we take ft_score; while a match is still LIVE, ft_score is
+  // not set yet, so we use the running score (which is within regulation).
+  const ft = parseScore(m.scores?.ft_score);
+  const running = parseScore(m.scores?.score);
+  const score = st.finished ? (ft || running) : (running || ft);
   const result = (st.live || st.finished) && score ? score : null;
   const { elapsed, clock } = parseClock(m.time, st);
   const day = m.date || fallbackDay;            // history has m.date; live does not
