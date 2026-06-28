@@ -89,7 +89,7 @@ async function main() {
   // the bracket is set. New fixtures (a round that didn't exist yet) are
   // written in full. NEVER predictions or users - those are separate collections.
   const existingSnap = await db.collection('matches').get();
-  const have = new Set(existingSnap.docs.map((d) => d.id));
+  const existing = new Map(existingSnap.docs.map((d) => [d.id, d.data()]));
   const identityOf = (m) => ({
     stageId: m.stageId,
     round: m.round,
@@ -102,19 +102,37 @@ async function main() {
     homeTeam: m.homeTeam,
     awayTeam: m.awayTeam,
   });
+  // Order-independent signature of just the fixture-identity fields, so we can
+  // tell whether anything actually changed and skip writing otherwise. This is
+  // what makes it cheap to run every few minutes: a run that finds no new
+  // fixtures and no team/kickoff changes writes nothing at all.
+  const teamKey = (t) => (t ? `${t.id}|${t.name}|${t.code}|${t.flag}` : '');
+  const idSig = (o) => [
+    o.stageId, o.round, o.matchday, o.group, o.kickoff, o.date,
+    o.venue, o.city, teamKey(o.homeTeam), teamKey(o.awayTeam),
+  ].join('~');
+
+  // Decide what to write: full doc for brand-new fixtures, identity-only for
+  // existing fixtures whose identity changed (e.g. a knockout placeholder
+  // resolving to real teams). Existing live fields are never touched.
+  const plan = [];
+  let created = 0;
+  for (const m of matches) {
+    const ex = existing.get(m.id);
+    if (!ex) { plan.push({ id: m.id, data: m }); created += 1; continue; }
+    if (idSig(ex) !== idSig(m)) plan.push({ id: m.id, data: identityOf(m) });
+  }
+
+  if (!plan.length) {
+    console.log(`No fixture changes (${matches.length} checked) - nothing written.`);
+    process.exit(0);
+  }
 
   let written = 0;
-  let created = 0;
-  for (let i = 0; i < matches.length; i += 400) {
+  for (let i = 0; i < plan.length; i += 400) {
     const batch = db.batch();
-    for (const m of matches.slice(i, i + 400)) {
-      const ref = db.collection('matches').doc(m.id);
-      if (have.has(m.id)) {
-        batch.set(ref, identityOf(m), { merge: true });
-      } else {
-        batch.set(ref, m, { merge: true });
-        created += 1;
-      }
+    for (const p of plan.slice(i, i + 400)) {
+      batch.set(db.collection('matches').doc(p.id), p.data, { merge: true });
       written += 1;
     }
     await batch.commit();
@@ -123,11 +141,11 @@ async function main() {
   await db.collection('meta').doc('state').set({
     lastSync: Date.now(),
     source: PROVIDER_NAME,
-    matchCount: written,
+    matchCount: existing.size + created,
     version: 3,
   }, { merge: true });
 
-  console.log(`Synced ${written} matches via ${PROVIDER_NAME} (${created} new). Done.`);
+  console.log(`Synced ${written} fixture change(s) via ${PROVIDER_NAME} (${created} new). Done.`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

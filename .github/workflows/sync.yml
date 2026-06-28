@@ -31,6 +31,16 @@ jobs:
 
       - run: npm ci
 
+      - name: Seed / refresh fixtures (ESPN, keyless)
+        # Cheap: writes only new fixtures or changed teams/kickoffs, nothing on
+        # a no-change run. This is what pulls in each knockout round the moment
+        # its bracket is published, with no manual step.
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ESPN_LEAGUE: fifa.world
+        run: npm run sync
+
       - name: Run live overlay
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
