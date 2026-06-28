@@ -81,13 +81,40 @@ async function main() {
   const db = admin.firestore();
   console.log(`Provider: ${PROVIDER_NAME} | matches: ${matches.length} | project: ${admin.app().options.projectId || '(default)'}`);
 
-  // Write matches only. NEVER predictions or users - those live in separate
-  // collections this script does not write, so the API can never affect them.
+  // Which matches already exist? For those we refresh ONLY fixture identity
+  // (teams, kickoff, venue, stage) so this can run safely alongside the live
+  // overlay: it can never overwrite a live score, a finished result, or the
+  // overlay's events. Crucially, this is also how a knockout fixture seeded
+  // earlier with placeholder teams ("Winner Group A") gets its real teams once
+  // the bracket is set. New fixtures (a round that didn't exist yet) are
+  // written in full. NEVER predictions or users - those are separate collections.
+  const existingSnap = await db.collection('matches').get();
+  const have = new Set(existingSnap.docs.map((d) => d.id));
+  const identityOf = (m) => ({
+    stageId: m.stageId,
+    round: m.round,
+    matchday: m.matchday,
+    group: m.group,
+    kickoff: m.kickoff,
+    date: m.date,
+    venue: m.venue,
+    city: m.city,
+    homeTeam: m.homeTeam,
+    awayTeam: m.awayTeam,
+  });
+
   let written = 0;
+  let created = 0;
   for (let i = 0; i < matches.length; i += 400) {
     const batch = db.batch();
     for (const m of matches.slice(i, i + 400)) {
-      batch.set(db.collection('matches').doc(m.id), m, { merge: true });
+      const ref = db.collection('matches').doc(m.id);
+      if (have.has(m.id)) {
+        batch.set(ref, identityOf(m), { merge: true });
+      } else {
+        batch.set(ref, m, { merge: true });
+        created += 1;
+      }
       written += 1;
     }
     await batch.commit();
@@ -100,7 +127,7 @@ async function main() {
     version: 3,
   }, { merge: true });
 
-  console.log(`Synced ${written} matches via ${PROVIDER_NAME}. Done.`);
+  console.log(`Synced ${written} matches via ${PROVIDER_NAME} (${created} new). Done.`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

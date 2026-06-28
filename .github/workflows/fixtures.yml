@@ -1,0 +1,46 @@
+name: Sync fixtures
+
+# The live overlay (sync.yml) only updates scores on matches that ALREADY
+# exist. This workflow runs the fixture seeder (scripts/sync.mjs, ESPN), which
+# is what creates new fixtures and fills in knockout teams once a round's
+# bracket is set. It is keyless (ESPN) and safe to run alongside the overlay:
+# for matches that already exist it refreshes only fixture identity (teams,
+# kickoff, venue, stage) and never touches live score/result/events.
+#
+# GitHub throttles scheduled runs on free public repos, so the schedule below
+# is best-effort. For reliability, trigger this the same way as the overlay:
+# a cron-job.org job POSTing to
+#   https://api.github.com/repos/<owner>/<repo>/actions/workflows/fixtures.yml/dispatches
+# every ~30 min with body {"ref":"main"} (same PAT, Actions: read+write).
+
+on:
+  schedule:
+    - cron: '8,38 * * * *'   # ~twice an hour, offset from the overlay's */5
+  workflow_dispatch:          # manual run from the Actions tab, or via cron-job.org
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fixtures
+  cancel-in-progress: false
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Seed / refresh fixtures
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ESPN_LEAGUE: fifa.world
+        run: npm run sync

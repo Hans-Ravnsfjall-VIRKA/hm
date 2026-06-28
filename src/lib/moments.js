@@ -30,8 +30,7 @@ const T = {
     '{navn} sá tað koma, tá {lið} vann.',
   ],
   streak: [
-    '{navn} hevur nú {tal} rættar á rað.',
-    '{tal} á rað! Hvør steðgar {navn}?',
+    '{navn} hevur tippað {tal} rættar dystir á rað 🔥',
   ],
   nobody: [
     'Hesin dysturin lumpaði øll. Eingin fekk hann rættan.',
@@ -69,7 +68,7 @@ function pick(arr, seed) {
   return arr[h % arr.length];
 }
 function fill(tpl, vars) {
-  return tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? vars[k] : ''));
+  return tpl.replace(/\{([^}]+)\}/g, (_, k) => (vars[k] != null ? vars[k] : ''));
 }
 function outcomeOf(r) { return r.h > r.a ? 'H' : r.h < r.a ? 'A' : 'D'; }
 
