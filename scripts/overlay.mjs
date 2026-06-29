@@ -543,27 +543,22 @@ async function syncOnce(cache = null) {
   let existing = cache;
   if (!existing) {
     const now = Date.now();
-    // Idle-skip: a cheap 1-doc probe for anything live, just-finished, or about
-    // to start. If there's nothing in that window, the overlay has no work, so
-    // we don't read the collection at all. This makes quiet hours and rest days
-    // cost ~1 read instead of ~15. The 4h look-back comfortably covers a live
-    // match, a game that just ended, or one stuck live awaiting the sweeper.
-    const probe = await db.collection('matches')
-      .where('kickoff', '>=', now - 4 * 60 * 60 * 1000)
-      .where('kickoff', '<=', now + 30 * 60 * 1000)
-      .limit(1).get();
-    if (probe.empty) {
-      console.log('overlay: nothing live or imminent - skipping (no collection read).');
-      return { live: false, matches: [] };
-    }
-    // Something is in play or near: read matches around "now" (recently
-    // finished, live, or about to start), not the whole tournament. The live
-    // feed only ever covers this window. Single-field range query: no index.
-    const snap = await db.collection('matches')
-      .where('kickoff', '>=', now - 36 * 60 * 60 * 1000)
-      .where('kickoff', '<=', now + 12 * 60 * 60 * 1000)
-      .get();
-    existing = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Read matches around "now" (the live feed only ever covers this window),
+    // UNION any match still flagged live, so a game stuck live - even an old one
+    // - is always present for the stale-match sweeper below. Two single-field
+    // queries merged by id (no composite index), and far fewer reads than the
+    // whole tournament (~15 vs ~100), which is what keeps us inside the free tier.
+    const [winSnap, liveSnap] = await Promise.all([
+      db.collection('matches')
+        .where('kickoff', '>=', now - 36 * 60 * 60 * 1000)
+        .where('kickoff', '<=', now + 12 * 60 * 60 * 1000)
+        .get(),
+      db.collection('matches').where('live', '==', true).get(),
+    ]);
+    const byId = new Map();
+    for (const d of winSnap.docs) byId.set(d.id, { id: d.id, ...d.data() });
+    for (const d of liveSnap.docs) byId.set(d.id, { id: d.id, ...d.data() });
+    existing = [...byId.values()];
   }
   const byPair = new Map();
   for (const m of existing) {
@@ -619,13 +614,16 @@ async function syncOnce(cache = null) {
 
     // Safety: a real match is over well within 3.5h of kickoff. If the feed
     // still reports it as live that long after kickoff (stale / insufficient
-    // data), close it so it can't get stuck on LIVE in the app.
+    // data), close it so it can't get stuck on LIVE in the app. Mark it so we
+    // replace the stale in-play score with the real 90-minute final below.
+    let staleForced = false;
     if (update.live && ex.kickoff && Date.now() - ex.kickoff > STALE_MS) {
       update.status = 'FT';
       update.live = false;
       update.finished = true;
       update.elapsed = null;
       update.clock = null;
+      staleForced = true;
     }
     covered.add(ex.id);
 
@@ -658,6 +656,9 @@ async function syncOnce(cache = null) {
       if (sum) {
         applySummary(ex.id, sum, update, detailOps, lsHasEvents);
         if (update.events) newEvents = update.events;
+        // Stale feed forced this closed: trust ESPN's 90-minute final, not the
+        // frozen in-play score the live feed was still reporting.
+        if (staleForced && sum.events.length) update.result = regulationResult(sum.events);
         console.log(`  detail via ESPN ${ex.homeTeam?.name} v ${ex.awayTeam?.name}: ev=${sum.events.length} stats=${sum.stats.length} lineups=${!!sum.lineups} comm=${sum.commentary.length} (id ${ex.id})`);
       }
     }
@@ -683,13 +684,15 @@ async function syncOnce(cache = null) {
     }
   }
 
-  // Safety net: close any match still flagged live long after kickoff that the
-  // feed no longer returns at all (dropped out before a sync caught full time).
-  // Pull the real final straight from ESPN so a swept match isn't frozen on a
-  // stale in-play score: the stored result is the 90-minute score from ESPN's
-  // goal events, plus its events / line-ups / stats / commentary.
+  // Safety net: close any UNFINISHED match well past kickoff that the feed
+  // didn't return this run (dropped out before a sync caught full time, or never
+  // got flagged live). Not gated on the live flag - the app shows any unfinished
+  // past-kickoff match as "being played", so those must be closed too. Pull the
+  // real final from ESPN so a swept match isn't frozen on a stale in-play score:
+  // the stored result is the 90-minute score from ESPN's goal events, plus its
+  // events / line-ups / stats / commentary.
   for (const m of existing) {
-    if (!m.live || covered.has(m.id)) continue;
+    if (m.finished || covered.has(m.id)) continue;
     if (!m.kickoff || Date.now() - m.kickoff <= STALE_MS) continue;
     const close = { status: 'FT', live: false, finished: true, clock: null, elapsed: null };
     const sum = await espnSummary(m.id, m.homeTeam?.id, m.awayTeam?.id);
