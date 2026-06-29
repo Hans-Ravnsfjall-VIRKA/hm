@@ -122,10 +122,19 @@ function normalizeEvent(ev) {
 }
 
 async function fetchRange(range) {
-  const res = await fetch(scoreboardUrl(range), { headers: { accept: 'application/json' } });
-  if (!res.ok) throw new Error(`ESPN ${range} -> ${res.status} ${res.statusText}`);
-  const data = await res.json();
-  return data.events || [];
+  // Bounded: a slow/unresponsive ESPN scoreboard must not hang the run. Without
+  // this abort, the fixture sync could stall until the job timeout and starve
+  // the live overlay that runs after it.
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(scoreboardUrl(range), { headers: { accept: 'application/json' }, signal: ctrl.signal });
+    if (!res.ok) throw new Error(`ESPN ${range} -> ${res.status} ${res.statusText}`);
+    const data = await res.json();
+    return data.events || [];
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 // --- Live refresh via the per-match summary endpoint -----------------------

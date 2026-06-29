@@ -31,16 +31,10 @@ jobs:
 
       - run: npm ci
 
-      - name: Seed / refresh fixtures (ESPN, keyless)
-        # Cheap: writes only new fixtures or changed teams/kickoffs, nothing on
-        # a no-change run. This is what pulls in each knockout round the moment
-        # its bracket is published, with no manual step.
-        continue-on-error: true
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          ESPN_LEAGUE: fifa.world
-        run: npm run sync
-
+      # The live overlay (scores + events) runs FIRST and is the only step that
+      # can fail the job, so a slow ESPN fixture pull or a long auto-fill can
+      # never starve it or take the run down. The two secondary steps are
+      # best-effort and time-capped.
       - name: Run live overlay
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -48,11 +42,22 @@ jobs:
           LIVESCORE_API_SECRET: ${{ secrets.LIVESCORE_API_SECRET }}
         run: npm run overlay
 
+      - name: Seed / refresh fixtures (ESPN, keyless)
+        # Writes only new fixtures or changed teams/kickoffs, nothing on a
+        # no-change run. Pulls in each knockout round when its bracket publishes.
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ESPN_LEAGUE: fifa.world
+        run: npm run sync
+
       - name: Auto-fill missing predictions at round deadlines
         # When a round's first match kicks off, top up every player's blank
-        # matches in that round so nobody is locked out. Cheap: skips until a
-        # deadline is actually due. Never blocks the steps above.
+        # matches in that round so nobody is locked out. Skips until a deadline
+        # is actually due.
         continue-on-error: true
+        timeout-minutes: 2
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: npm run autofill
