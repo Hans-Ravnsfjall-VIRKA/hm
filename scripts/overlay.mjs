@@ -542,7 +542,16 @@ async function syncOnce(cache = null) {
   //    after each write) so we don't re-read the whole collection every poll.
   let existing = cache;
   if (!existing) {
-    const snap = await db.collection('matches').get();
+    // Read only matches around "now" (recently finished, live, or about to
+    // start), not the whole tournament. The live feed only ever covers this
+    // window, so this is all the overlay can act on - and it cuts the per-run
+    // read count from ~100 to a handful, keeping us inside Firestore's free
+    // tier. Single-field range query: no composite index needed.
+    const now = Date.now();
+    const snap = await db.collection('matches')
+      .where('kickoff', '>=', now - 36 * 60 * 60 * 1000)
+      .where('kickoff', '<=', now + 12 * 60 * 60 * 1000)
+      .get();
     existing = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   }
   const byPair = new Map();

@@ -57,6 +57,23 @@ function initFirebase() {
 
 // --- Main ------------------------------------------------------------------
 async function main() {
+  // Throttle: fixtures barely change, so running this every 3-minute cron tick
+  // is wasteful and (on Firestore's free tier) burns the daily read quota. Run
+  // at most once every ~20 minutes; a skipped tick costs a single meta read.
+  initFirebase();
+  const db = admin.firestore();
+  const MIN_INTERVAL_MS = 20 * 60 * 1000;
+  const gateRef = db.collection('meta').doc('fixturesync');
+  const gateSnap = await gateRef.get();
+  const lastRun = (gateSnap.exists && gateSnap.data().lastRun) || 0;
+  if (Date.now() - lastRun < MIN_INTERVAL_MS) {
+    console.log(`fixture sync: ran ${Math.round((Date.now() - lastRun) / 60000)} min ago - skipping.`);
+    return;
+  }
+  // Start the skip window now, so even if the provider fetch below fails we
+  // don't retry every tick (fixtures aren't urgent).
+  await gateRef.set({ lastRun: Date.now() }, { merge: true });
+
   // Pull from the provider FIRST. If the source is down or access is lost this
   // throws (or returns nothing) and we exit WITHOUT writing - so existing data
   // and, crucially, all predictions are never touched. Writes are merge-only,
@@ -77,8 +94,6 @@ async function main() {
     process.exit(0);
   }
 
-  initFirebase();
-  const db = admin.firestore();
   console.log(`Provider: ${PROVIDER_NAME} | matches: ${matches.length} | project: ${admin.app().options.projectId || '(default)'}`);
 
   // Which matches already exist? For those we refresh ONLY fixture identity
