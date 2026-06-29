@@ -79,6 +79,22 @@ function espnKeyEvents(data, homeId, awayId) {
   return out;
 }
 
+// 90-minute (regulation) score from goal events: count goals in minutes 1-90,
+// which excludes extra-time goals (91-120) and the penalty shootout (no clock,
+// min 0). Own goals are already attributed to the team that benefits, so we
+// just tally by side. Used when force-closing a stale match from ESPN.
+function regulationResult(events) {
+  let h = 0;
+  let a = 0;
+  for (const e of (Array.isArray(events) ? events : [])) {
+    if (e.t !== 'goal') continue;
+    if (!(e.min >= 1 && e.min <= 90)) continue;
+    if (e.side === 'home') h += 1;
+    else if (e.side === 'away') a += 1;
+  }
+  return { h, a };
+}
+
 // Curated team stats, in display order, with Faroese labels.
 // FLAGGED: Faroese labels need native-speaker review.
 const STAT_DEFS = [
@@ -649,11 +665,19 @@ async function syncOnce(cache = null) {
 
   // Safety net: close any match still flagged live long after kickoff that the
   // feed no longer returns at all (dropped out before a sync caught full time).
+  // Pull the real final straight from ESPN so a swept match isn't frozen on a
+  // stale in-play score: the stored result is the 90-minute score from ESPN's
+  // goal events, plus its events / line-ups / stats / commentary.
   for (const m of existing) {
     if (!m.live || covered.has(m.id)) continue;
     if (!m.kickoff || Date.now() - m.kickoff <= STALE_MS) continue;
     const close = { status: 'FT', live: false, finished: true, clock: null, elapsed: null };
-    if (DRY) console.log(`  CLOSE ${m.homeTeam?.name} v ${m.awayTeam?.name}: LIVE -> FT (stale, not in feed, id ${m.id})`);
+    const sum = await espnSummary(m.id, m.homeTeam?.id, m.awayTeam?.id);
+    if (sum && sum.events.length) {
+      close.result = regulationResult(sum.events);
+      applySummary(m.id, sum, close, detailOps, false); // events + evFix + detail/feat
+    }
+    if (DRY) console.log(`  CLOSE ${m.homeTeam?.name} v ${m.awayTeam?.name}: LIVE -> FT (stale, id ${m.id}) result=${JSON.stringify(close.result ?? m.result ?? null)}`);
     else ops.push({ id: m.id, update: close });
   }
 
