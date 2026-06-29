@@ -542,12 +542,23 @@ async function syncOnce(cache = null) {
   //    after each write) so we don't re-read the whole collection every poll.
   let existing = cache;
   if (!existing) {
-    // Read only matches around "now" (recently finished, live, or about to
-    // start), not the whole tournament. The live feed only ever covers this
-    // window, so this is all the overlay can act on - and it cuts the per-run
-    // read count from ~100 to a handful, keeping us inside Firestore's free
-    // tier. Single-field range query: no composite index needed.
     const now = Date.now();
+    // Idle-skip: a cheap 1-doc probe for anything live, just-finished, or about
+    // to start. If there's nothing in that window, the overlay has no work, so
+    // we don't read the collection at all. This makes quiet hours and rest days
+    // cost ~1 read instead of ~15. The 4h look-back comfortably covers a live
+    // match, a game that just ended, or one stuck live awaiting the sweeper.
+    const probe = await db.collection('matches')
+      .where('kickoff', '>=', now - 4 * 60 * 60 * 1000)
+      .where('kickoff', '<=', now + 30 * 60 * 1000)
+      .limit(1).get();
+    if (probe.empty) {
+      console.log('overlay: nothing live or imminent - skipping (no collection read).');
+      return { live: false, matches: [] };
+    }
+    // Something is in play or near: read matches around "now" (recently
+    // finished, live, or about to start), not the whole tournament. The live
+    // feed only ever covers this window. Single-field range query: no index.
     const snap = await db.collection('matches')
       .where('kickoff', '>=', now - 36 * 60 * 60 * 1000)
       .where('kickoff', '<=', now + 12 * 60 * 60 * 1000)
