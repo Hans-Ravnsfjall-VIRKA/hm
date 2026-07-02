@@ -126,17 +126,14 @@ export function stageComplete(stage, picks) {
 }
 
 /**
- * Stages a player can act on now in the Tipping screen:
- *  - still open for registration, OR
- *  - already locked but the player completed it and some match is still
- *    inside its 1-hour edit window.
+ * Stages a player can act on now in the Tipping screen: any stage that still
+ * has at least one match whose teams are known and whose own edit window is
+ * open. This is per-match - a round shows as soon as any of its ties is
+ * announced, and stays available for its not-yet-started matches even after
+ * the round's first match has kicked off.
  */
-export function tippableStages(stages, picks) {
-  return stages.filter((s) => {
-    if (!s.teamsKnown || !s.count || s.finished) return false;
-    if (s.open) return true;
-    return s.hasEditable && stageComplete(s, picks);
-  });
+export function tippableStages(stages) {
+  return stages.filter((s) => s.count && !s.finished && s.hasEditable);
 }
 
 export function openStages(stages) {

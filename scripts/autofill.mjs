@@ -19,8 +19,7 @@
 import admin from 'firebase-admin';
 import { readFileSync } from 'node:fs';
 
-// Mirror of the stage + lock logic in src/lib/tournament.js. Keep in sync.
-const STAGE_ORDER = ['group', 'r32', 'r16', 'qf', 'sf', 'third', 'final'];
+// Mirror of the team/lock logic in src/lib/tournament.js. Keep in sync.
 const PLACEHOLDER = /(winner|runner|loser|group [a-l]\b|tbd|to be determined|1[a-l]\b|2[a-l]\b|\/)/i;
 const isConcrete = (t) => !!(t && t.name && !PLACEHOLDER.test(t.name));
 const hasTeams = (m) => isConcrete(m.homeTeam) && isConcrete(m.awayTeam);
@@ -29,6 +28,7 @@ const hasTeams = (m) => isConcrete(m.homeTeam) && isConcrete(m.awayTeam);
 // we notice when its bracket resolves and a real deadline appears.
 const RECHECK_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const EDIT_CUTOFF_MS = 60 * 60 * 1000; // 1h before kickoff - matches src/lib/tournament.js
 
 // The same weighted bag the in-app auto-fill button uses (realistic low scores).
 const GOAL_BAG = [0, 0, 0, 1, 1, 1, 1, 2, 2, 3];
@@ -59,87 +59,73 @@ async function main() {
   const metaRef = db.collection('meta').doc('autofill');
   const metaSnap = await metaRef.get();
   const meta = metaSnap.exists ? metaSnap.data() : {};
-  const filled = new Set(meta.filledStages || []);
+  const filled = new Set(meta.filledMatches || []);
   if (meta.nextCheck && now < meta.nextCheck) {
     console.log(`autofill: next check ${new Date(meta.nextCheck).toISOString()} - skipping.`);
     return;
   }
 
-  // Load fixtures, group into stages.
-  const byStage = {};
+  // Load fixtures.
   const matchSnap = await db.collection('matches').get();
-  for (const d of matchSnap.docs) {
-    const m = { id: d.id, ...d.data() };
-    (byStage[m.stageId] ||= []).push(m);
-  }
+  const matches = matchSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const concrete = matches.filter(hasTeams);
 
-  // Per stage: are all teams known, and when is the registration deadline
-  // (the first concrete kickoff)?
-  const info = {};
-  for (const sid of STAGE_ORDER) {
-    const all = byStage[sid] || [];
-    if (!all.length) continue;
-    const concrete = all.filter(hasTeams);
-    const teamsKnown = concrete.length === all.length;
-    const kicks = concrete.map((m) => m.kickoff).filter((k) => k != null);
-    const firstKickoff = kicks.length ? Math.min(...kicks) : null;
-    info[sid] = { concrete, teamsKnown, firstKickoff };
-  }
-
-  // Rounds whose deadline has passed, teams fully known, not yet filled.
-  const due = STAGE_ORDER.filter((sid) => {
-    const i = info[sid];
-    return i && i.teamsKnown && i.firstKickoff != null && now >= i.firstKickoff && !filled.has(sid);
-  });
+  // A match's prediction deadline is EDIT_CUTOFF before its own kickoff - the
+  // same point the app stops letting you edit it. Per-match (not per-round), so
+  // later matches in a round stay open for players even after the round's first
+  // match has started. Fill blanks for any concrete match past its deadline
+  // that isn't finished and hasn't been filled yet.
+  const dueMatches = concrete.filter((m) => (
+    m.kickoff != null
+    && now >= m.kickoff - EDIT_CUTOFF_MS
+    && !m.finished
+    && !filled.has(m.id)
+  ));
 
   let totalFills = 0;
-  if (due.length) {
+  if (dueMatches.length) {
     const predSnap = await db.collection('predictions').get();
     const players = predSnap.docs.map((d) => ({ ref: d.ref, picks: d.data().picks || {} }));
-
-    for (const sid of due) {
-      const { concrete } = info[sid];
-      const ops = [];
-      for (const p of players) {
-        const addPicks = {};
-        for (const m of concrete) {
-          if (m.finished) continue; // never invent a pick for a decided match
-          const ex = p.picks[m.id];
-          if (ex && Number.isInteger(ex.h) && Number.isInteger(ex.a)) continue;
-          addPicks[m.id] = { h: randGoals(), a: randGoals() };
-        }
-        if (Object.keys(addPicks).length) ops.push({ ref: p.ref, addPicks });
+    const ops = [];
+    for (const p of players) {
+      const addPicks = {};
+      for (const m of dueMatches) {
+        const ex = p.picks[m.id];
+        if (ex && Number.isInteger(ex.h) && Number.isInteger(ex.a)) continue;
+        addPicks[m.id] = { h: randGoals(), a: randGoals() };
       }
-      for (let i = 0; i < ops.length; i += 400) {
-        const batch = db.batch();
-        for (const op of ops.slice(i, i + 400)) {
-          batch.set(op.ref, {
-            picks: op.addPicks,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          }, { merge: true });
-        }
-        await batch.commit();
-      }
-      filled.add(sid);
-      totalFills += ops.length;
-      console.log(`autofill: round ${sid} closed -> topped up ${ops.length} player(s).`);
+      if (Object.keys(addPicks).length) ops.push({ ref: p.ref, addPicks });
     }
+    for (let i = 0; i < ops.length; i += 400) {
+      const batch = db.batch();
+      for (const op of ops.slice(i, i + 400)) {
+        batch.set(op.ref, {
+          picks: op.addPicks,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      await batch.commit();
+    }
+    for (const m of dueMatches) filled.add(m.id);
+    totalFills = ops.length;
+    console.log(`autofill: ${dueMatches.length} match(es) locked -> topped up ${ops.length} player(s).`);
   } else {
-    console.log('autofill: no round past its deadline to fill.');
+    console.log('autofill: no match past its deadline to fill.');
   }
 
-  // Next time to look: the soonest future deadline among unfilled rounds, an
-  // hourly recheck while a future round still has placeholder teams, else a day.
+  // Next look: the soonest future match deadline; an hourly recheck while any
+  // tie still has placeholder teams (its deadline appears once it resolves);
+  // else a day out.
   const candidates = [];
-  for (const sid of STAGE_ORDER) {
-    const i = info[sid];
-    if (!i || filled.has(sid)) continue;
-    if (i.teamsKnown && i.firstKickoff != null && i.firstKickoff > now) candidates.push(i.firstKickoff);
-    else if (!i.teamsKnown) candidates.push(now + RECHECK_MS);
+  for (const m of concrete) {
+    if (filled.has(m.id) || m.kickoff == null) continue;
+    const deadline = m.kickoff - EDIT_CUTOFF_MS;
+    if (deadline > now) candidates.push(deadline);
   }
+  if (matches.some((m) => !hasTeams(m) && !m.finished)) candidates.push(now + RECHECK_MS);
   const nextCheck = candidates.length ? Math.min(...candidates) : now + DAY_MS;
 
-  await metaRef.set({ filledStages: [...filled], nextCheck, lastRun: now }, { merge: true });
+  await metaRef.set({ filledMatches: [...filled], nextCheck, lastRun: now }, { merge: true });
   console.log(`autofill: done. ${totalFills} fill(s). Next check ${new Date(nextCheck).toISOString()}.`);
 }
 

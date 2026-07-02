@@ -3,7 +3,7 @@ import { useTournamentCtx, useSavePicks } from '../hooks/useData';
 import { useAuth } from '../auth/AuthContext';
 import { Flag, ScoreInput } from '../components/Match';
 import {
-  isConcreteTeam, timeUntil, matchEditable, matchHasTeams, stageComplete, tippableStages,
+  isConcreteTeam, timeUntil, matchEditable, matchHasTeams, tippableStages,
 } from '../lib/tournament';
 import { foDateTime } from '../lib/foDate';
 
@@ -56,16 +56,16 @@ export default function Predict() {
   const savedPicks = useMemo(
     () => predictionDocs.find((d) => d.uid === user?.uid)?.picks || {}, [predictionDocs, user]);
 
-  const tippable = useMemo(() => tippableStages(stages, savedPicks), [stages, savedPicks]);
+  const tippable = useMemo(() => tippableStages(stages), [stages]);
 
-  // Matches you can still edit that you have not tipped yet.
+  // Matches you can still edit that you have not tipped yet (per-match: teams
+  // known and inside the match's own edit window).
   const fillable = useMemo(() => {
     const out = [];
     for (const s of tippable) {
-      const complete = stageComplete(s, savedPicks);
       for (const m of s.matches) {
         if (!matchHasTeams(m)) continue;
-        if (!(matchEditable(m, now) && (s.open || complete))) continue;
+        if (!matchEditable(m, now)) continue;
         const p = savedPicks[m.id];
         if (!(p && Number.isInteger(p.h) && Number.isInteger(p.a))) out.push(m);
       }
@@ -153,12 +153,11 @@ function StagePredictor({ stage, savedPicks, now, savePicks, showAll }) {
   }, [stage.id, savedPicks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const complete = (p) => Number.isInteger(p?.h) && Number.isInteger(p?.a);
-  const alreadyComplete = stageComplete(stage, savedPicks);
 
-  // After registration locks, only people who already completed the stage may
-  // edit, and only matches still inside their 1-hour window.
-  const canEditMatch = (m) =>
-    matchEditable(m, now) && (!stage.registrationLocked || alreadyComplete);
+  // A match is editable purely on its own terms: teams are known and its own
+  // 1-hour-before-kickoff window is still open. No round-level lock - you can
+  // predict any announced, not-yet-started match.
+  const canEditMatch = (m) => matchHasTeams(m) && matchEditable(m, now);
 
   // Store the moment a match is fully entered - no save button needed.
   async function autosave(m, pick) {
@@ -185,17 +184,21 @@ function StagePredictor({ stage, savedPicks, now, savePicks, showAll }) {
     });
   };
 
-  const done = stage.matches.filter((m) => complete(picks[m.id])).length;
-  const all = stage.matches.length;
-  const shown = showAll ? stage.matches : stage.matches.filter((m) => !m.finished);
+  // Only matches whose teams are known can be predicted, so counts and rows are
+  // over those. Placeholder ties (e.g. "Round of 32 1 Winner") appear here once
+  // their teams resolve.
+  const concreteMatches = stage.matches.filter(matchHasTeams);
+  const done = concreteMatches.filter((m) => complete(picks[m.id])).length;
+  const all = concreteMatches.length;
+  const shown = (showAll ? concreteMatches : concreteMatches.filter((m) => !m.finished));
   const remaining = timeUntil(stage.firstKickoff, now);
-  const savedAll = stage.matches.every((m) => {
+  const savedAll = concreteMatches.every((m) => {
     const p = picks[m.id]; const s = savedPicks[m.id];
     return complete(p) && s && s.h === p.h && s.a === p.a;
   });
 
-  // A fully-played stage has nothing upcoming; hide it in the default view.
-  if (!showAll && shown.length === 0) return null;
+  // Nothing to show right now (all played, or none announced yet).
+  if (shown.length === 0) return null;
 
   return (
     <section style={{ marginBottom: 28 }}>
